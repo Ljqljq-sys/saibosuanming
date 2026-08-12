@@ -7,25 +7,46 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0a;
     --purple: #9d4edd;
     --pink: #e040fb;
-    --card-bg: rgba(15, 5, 30, 0.85);
+    --cyan: #00f5ff;
+    --card-bg: rgba(15, 5, 30, 0.82);
+    --grid-color: rgba(157,78,221,0.25);
+    --glow-color: rgba(157,78,221,0.25);
   }
   * { margin:0; padding:0; box-sizing:border-box; }
 
   body {
-    background: var(--bg);
+    background: radial-gradient(ellipse at 50% 60%, #14082a 0%, #0a0015 45%, #050510 100%);
     color: #e0d0f0;
     font-family: "Microsoft YaHei","PingFang SC","Helvetica Neue",sans-serif;
     min-height:100vh; display:flex; align-items:center; justify-content:center;
-    overflow:hidden;
+    overflow:hidden; position:relative;
   }
 
-  #bgCanvas { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+  /* ===== 三层 Canvas ===== */
+  #gridCanvas, #rainCanvas {
+    position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;
+  }
+  #gridCanvas  { z-index:0; }
+  #rainCanvas { z-index:1; }
 
+  /* ===== 标题后光斑 ===== */
+  .glow-orb {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:min(500px,80vw); height:min(500px,80vw);
+    background:radial-gradient(circle, rgba(157,78,221,0.18) 0%, rgba(0,245,255,0.06) 30%, transparent 70%);
+    border-radius:50%; filter:blur(60px); z-index:0; pointer-events:none;
+    animation:orbPulse 4s ease-in-out infinite;
+  }
+  @keyframes orbPulse {
+    0%,100% { transform:translate(-50%,-50%) scale(0.9); opacity:0.6; }
+    50%     { transform:translate(-50%,-50%) scale(1.3); opacity:1; }
+  }
+
+  /* ===== 主容器 ===== */
   .main {
-    position:relative; z-index:2; text-align:center; padding:20px;
+    position:relative; z-index:3; text-align:center; padding:20px;
     width:100%; max-width:700px;
   }
 
@@ -54,13 +75,15 @@
   .card {
     flex:1; min-width:0; max-width:280px;
     background:var(--card-bg);
-    border:1px solid rgba(157,78,221,0.2);
+    border:1px solid rgba(157,78,221,0.25);
     border-radius:20px; padding:36px 24px 28px;
     cursor:pointer; text-decoration:none; color:inherit;
     transition:transform 0.35s cubic-bezier(.34,1.56,.64,1), box-shadow 0.35s, border-color 0.35s;
     position:relative; overflow:hidden;
     opacity:0; transform:translateY(40px);
     animation:fadeInUp 0.7s ease forwards;
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
   }
   .card-left  { animation-delay:0.1s; }
   .card-right { animation-delay:0.3s; }
@@ -70,13 +93,13 @@
 
   .card::before {
     content:''; position:absolute; top:0; left:0; width:100%; height:100%;
-    background:radial-gradient(ellipse at 50% 0%, rgba(157,78,221,0.1) 0%, transparent 70%);
+    background:radial-gradient(ellipse at 50% 0%, rgba(157,78,221,0.12) 0%, transparent 70%);
     opacity:0; transition:opacity 0.35s;
   }
 
   .card:hover {
     transform:translateY(-10px);
-    box-shadow:0 0 30px rgba(157,78,221,0.3),0 0 60px rgba(224,64,251,0.15),0 10px 40px rgba(0,0,0,0.5);
+    box-shadow:0 0 30px rgba(157,78,221,0.35),0 0 60px rgba(224,64,251,0.18),0 10px 40px rgba(0,0,0,0.5);
   }
   .card:hover::before { opacity:1; }
   .card:active { transform:scale(0.95) translateY(-5px); transition:transform 0.1s; }
@@ -103,7 +126,7 @@
   .card:hover .card-desc { color:#b090d0; }
 
   .card-left:hover  { border-color:rgba(157,78,221,0.7); }
-  .card-right:hover { border-color:rgba(240,192,64,0.7); box-shadow:0 0 30px rgba(240,192,64,0.3),0 0 60px rgba(240,192,64,0.15),0 10px 40px rgba(0,0,0,0.5); }
+  .card-right:hover { border-color:rgba(0,245,255,0.5); box-shadow:0 0 30px rgba(0,245,255,0.25),0 0 60px rgba(0,245,255,0.1),0 10px 40px rgba(0,0,0,0.5); }
 
   .footer {
     margin-top:36px; font-size:11px; color:rgba(120,100,150,0.4);
@@ -123,17 +146,28 @@
   }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
+  /* ===== 减少动画 / 移动端适配 ===== */
+  @media (prefers-reduced-motion: reduce) {
+    .glow-orb { animation:none; opacity:0.5; }
+    .title { animation:none; }
+    .card { animation:none; opacity:1; transform:none; }
+    #gridCanvas, #rainCanvas { opacity:0.3; }
+  }
   @media (max-width:560px) {
     .cards { flex-direction:column; align-items:center; gap:16px; }
     .card { max-width:320px; width:100%; padding:28px 20px 22px; }
     .card:hover { transform:translateY(-6px); }
     .card:active { transform:scale(0.97) translateY(-3px); }
+    #gridCanvas, #rainCanvas { opacity:0.5; }
   }
 </style>
 </head>
 <body>
 
-<canvas id="bgCanvas"></canvas>
+<!-- 背景层 -->
+<canvas id="gridCanvas"></canvas>
+<canvas id="rainCanvas"></canvas>
+<div class="glow-orb"></div>
 
 <div class="main">
   <h1 class="title">玄不救非 · 赛博天机</h1>
@@ -145,7 +179,6 @@
       <div class="card-label">赛 博 算 命</div>
       <div class="card-desc">AI 紫微斗数 · 即时起卦</div>
     </a>
-
     <a class="card card-right" href="lottery.html" id="cardLottery">
       <span class="card-icon">🏮</span>
       <div class="card-label">抽　　　签</div>
@@ -160,15 +193,18 @@
 
 <script>
 // ============================================================
-// Canvas 背景 —— 粒子 + 连线
+// 是否启用完整动画
+// ============================================================
+var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ============================================================
+// 中层 Canvas: TRON 网格地面 (透视延伸)
 // ============================================================
 (function() {
-  var c = document.getElementById('bgCanvas');
+  var c = document.getElementById('gridCanvas');
   var ctx = c.getContext('2d');
   var w, h;
-  var particles = [];
-  var COUNT = 50;
-  var CONNECT = 140;
+  var offset = 0; // 滚动偏移
 
   function resize() {
     w = c.width = window.innerWidth;
@@ -177,47 +213,128 @@
   window.addEventListener('resize', resize);
   resize();
 
-  for (var i = 0; i < COUNT; i++) {
-    particles.push({
+  function drawGrid() {
+    ctx.clearRect(0, 0, w, h);
+
+    var horizonY = h * 0.58;    // 地平线位置
+    var vanishX = w * 0.5;      // 消失点 X
+    var cellCount = 24;         // 格线数量
+    var maxDepth = 70;          // 最大深度层数
+    var baseAlpha = reducedMotion ? 0.08 : 0.18;
+
+    // 水平线 (从近到远)
+    for (var depth = 1; depth <= maxDepth; depth++) {
+      var t = depth / maxDepth;
+      // 使用指数插值让近处线更密、远处更稀疏
+      var ty = horizonY + (h - horizonY) * Math.pow(t, 1.6);
+      if (ty > h + 2) break;
+
+      var alpha = baseAlpha * (1 - t) * 0.9;
+      var lineW = 0.5 + (1 - t) * 1.0;
+
+      ctx.beginPath();
+      ctx.moveTo(0, ty);
+      ctx.lineTo(w, ty);
+      ctx.strokeStyle = 'rgba(157,78,221,' + alpha + ')';
+      ctx.lineWidth = lineW;
+      ctx.stroke();
+    }
+
+    // 竖直线 (从消失点向外辐射)
+    for (var i = -cellCount; i <= cellCount; i++) {
+      var angle = (i / cellCount) * (Math.PI / 3); // 120度扇形
+      var dx = Math.sin(angle);
+      var alpha = baseAlpha * 0.7;
+
+      ctx.beginPath();
+      ctx.moveTo(vanishX, horizonY);
+      // 终点在屏幕底部
+      var endX = vanishX + dx * (h - horizonY) * 3;
+      ctx.lineTo(endX, h);
+      ctx.strokeStyle = 'rgba(0,245,255,' + alpha + ')';
+      ctx.lineWidth = 0.4;
+      ctx.stroke();
+    }
+
+    // 缓慢滚动
+    if (!reducedMotion) {
+      offset += 0.15;
+      if (offset > 2) offset -= 2;
+    }
+  }
+
+  function loop() {
+    drawGrid();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// ============================================================
+// 上层 Canvas: 稀疏数字雨 / 粒子流
+// ============================================================
+(function() {
+  var c = document.getElementById('rainCanvas');
+  var ctx = c.getContext('2d');
+  var w, h;
+  var drops = [];
+  var DROP_COUNT = 40;
+
+  function resize() {
+    w = c.width = window.innerWidth;
+    h = c.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // 初始化雨滴
+  var chars = '01';
+  for (var i = 0; i < DROP_COUNT; i++) {
+    drops.push({
       x: Math.random() * w,
       y: Math.random() * h,
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: (Math.random() - 0.5) * 0.4,
-      r: Math.random() * 1.2 + 0.3,
-      a: Math.random() * 0.5 + 0.2
+      speed: Math.random() * 0.6 + 0.2,
+      length: Math.random() * 6 + 2,
+      char: chars[Math.floor(Math.random() * chars.length)],
+      alpha: Math.random() * 0.15 + 0.05,
+      color: Math.random() < 0.6 ? '157,78,221' : '0,245,255'
     });
   }
 
-  function draw() {
+  function drawRain() {
     ctx.clearRect(0, 0, w, h);
-    for (var i = 0; i < particles.length; i++) {
-      var p = particles[i];
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
-      if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(157,78,221,' + p.a + ')';
-      ctx.fill();
+    ctx.font = '12px "Courier New", monospace';
+
+    if (reducedMotion) {
+      // 静止模式只画一次静态粒子
+      for (var i = 0; i < drops.length; i++) {
+        var d = drops[i];
+        ctx.fillStyle = 'rgba(' + d.color + ',' + (d.alpha * 0.5) + ')';
+        ctx.fillText(d.char, d.x, d.y);
+      }
+      return;
     }
-    for (var i = 0; i < particles.length; i++) {
-      for (var j = i + 1; j < particles.length; j++) {
-        var dx = particles[i].x - particles[j].x;
-        var dy = particles[i].y - particles[j].y;
-        var dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < CONNECT) {
-          ctx.beginPath();
-          ctx.moveTo(particles[i].x, particles[i].y);
-          ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.strokeStyle = 'rgba(157,78,221,' + ((1 - dist / CONNECT) * 0.12) + ')';
-          ctx.lineWidth = 0.5;
-          ctx.stroke();
-        }
+
+    for (var i = 0; i < drops.length; i++) {
+      var d = drops[i];
+      // 绘制字符
+      ctx.fillStyle = 'rgba(' + d.color + ',' + d.alpha + ')';
+      ctx.fillText(d.char, d.x, d.y);
+
+      // 移动
+      d.y += d.speed;
+      if (d.y > h + 20) {
+        d.y = -20;
+        d.x = Math.random() * w;
       }
     }
-    requestAnimationFrame(draw);
   }
-  draw();
+
+  function loop() {
+    drawRain();
+    requestAnimationFrame(loop);
+  }
+  loop();
 })();
 
 // ============================================================
