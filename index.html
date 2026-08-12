@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>玄不救非 · AI算命大师</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js">
+</script>
 <style>
   :root {
     --bg: #0a0012; --card-bg: rgba(20, 5, 40, 0.92);
@@ -198,6 +200,92 @@
   .error-msg { color:#ff5577; text-align:center; padding:14px; font-size:14px; }
 
   .footer { text-align:center; margin-top:14px; font-size:11px; color:rgba(160,144,192,0.35); line-height:1.6; }
+
+  /* ====== 海报样式 ====== */
+  #posterWrap { position:fixed; left:-9999px; top:0; z-index:-1; }
+  .poster {
+    width:420px; padding:0; font-family:"Microsoft YaHei","PingFang SC",sans-serif;
+    color:#e0d8f0; position:relative; overflow:hidden;
+    background:linear-gradient(180deg, #0d0018 0%, #150528 40%, #0a0020 100%);
+  }
+  /* 装饰边框 */
+  .poster-border {
+    position:absolute; top:10px; left:10px; right:10px; bottom:10px;
+    border:2px solid rgba(240,192,64,0.5);
+    border-radius:4px; pointer-events:none; z-index:2;
+    box-shadow:inset 0 0 40px rgba(155,48,255,0.15);
+  }
+  .poster-border::before {
+    content:''; position:absolute; top:-2px; left:-2px; right:-2px; bottom:-2px;
+    border:1px solid rgba(240,192,64,0.2); border-radius:5px;
+  }
+  /* 四角装饰 */
+  .poster-corner {
+    position:absolute; width:20px; height:20px; z-index:3;
+    border-color:var(--gold); border-style:solid;
+  }
+  .pc-tl { top:10px; left:10px; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+  .pc-tr { top:10px; right:10px; border-width:3px 3px 0 0; border-radius:0 4px 0 0; }
+  .pc-bl { bottom:10px; left:10px; border-width:0 0 3px 3px; border-radius:0 0 0 4px; }
+  .pc-br { bottom:10px; right:10px; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
+  /* 背景星星 */
+  .poster-stars { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; }
+  .poster-star {
+    position:absolute; background:white; border-radius:50%;
+    opacity:0; animation:psTwinkle var(--pdur) ease-in-out infinite;
+    animation-delay:var(--pdelay);
+  }
+  @keyframes psTwinkle {
+    0%,100%{opacity:0.1} 50%{opacity:0.7}
+  }
+  /* 内容区 */
+  .poster-inner { position:relative; z-index:4; padding:28px 26px 24px; }
+  .poster-header { text-align:center; margin-bottom:16px; }
+  .poster-header .ph-icon { font-size:32px; letter-spacing:4px; margin-bottom:4px; }
+  .poster-header .ph-title {
+    font-size:22px; font-weight:700;
+    background:linear-gradient(135deg,#f0d080,#c89030,#f0d080);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .poster-header .ph-divider {
+    width:80px; height:1px; margin:8px auto;
+    background:linear-gradient(90deg,transparent,rgba(240,192,64,0.6),transparent);
+  }
+  .poster-meta {
+    text-align:center; font-size:13px; color:#a090c0; margin-bottom:18px;
+    line-height:1.8;
+  }
+  .poster-meta .ph-name { font-size:16px; color:#f0c040; font-weight:600; }
+  .poster-fortune { margin-bottom:12px; }
+  .poster-line {
+    padding:9px 14px; margin-bottom:5px; border-radius:8px;
+    background:rgba(255,255,255,0.04); border-left:3px solid var(--purple);
+    font-size:13px; line-height:1.6;
+  }
+  .poster-line:nth-child(1){border-left-color:#f0c040}
+  .poster-line:nth-child(2){border-left-color:#5b9eff}
+  .poster-line:nth-child(3){border-left-color:#ff7eb6}
+  .poster-line:nth-child(4){border-left-color:#55ddaa}
+  .poster-line:nth-child(5){border-left-color:#00e5ff}
+  .poster-line:nth-child(6){border-left-color:#ff5577}
+  .poster-footer {
+    text-align:center; margin-top:14px; padding-top:12px;
+    border-top:1px solid rgba(240,192,64,0.15);
+    font-size:11px; color:rgba(160,144,192,0.5); line-height:1.6;
+  }
+  .poster-footer .pf-brand { font-size:12px; color:rgba(240,192,64,0.5); }
+  .poster-qr { text-align:center; margin-top:8px; font-size:10px; color:rgba(160,144,192,0.35); }
+  /* 海报按钮 */
+  .btn-poster {
+    width:100%; padding:13px; border:none; border-radius:14px;
+    font-size:15px; font-weight:600; cursor:pointer; transition:all 0.3s;
+    background:linear-gradient(135deg,#c89030,#a07020); color:white;
+    box-shadow:0 4px 20px rgba(200,144,48,0.3); margin-top:8px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-poster:hover { transform:translateY(-2px); box-shadow:0 6px 28px rgba(200,144,48,0.5); }
+  .btn-poster:active { transform:scale(0.97); }
+  .btn-poster:disabled { opacity:0.5; cursor:not-allowed; }
 </style>
 </head>
 <body>
@@ -240,8 +328,12 @@
     </div>
 
     <div class="result" id="result"></div>
+    <button class="btn-poster" id="posterBtn" style="display:none">📸 生成海报 · 发朋友圈</button>
     <button class="btn-secondary" id="retryBtn" style="display:none">🔄 再算一次</button>
   </div>
+
+  <!-- 海报渲染区（屏幕外） -->
+  <div id="posterWrap"><div class="poster" id="poster"></div></div>
 
   <div class="footer">☯ 仅供娱乐 · 你才是自己命运的主宰 ☯</div>
 </div>
@@ -605,6 +697,7 @@ var loading = document.getElementById('loading');
 var result = document.getElementById('result');
 var submitBtn = document.getElementById('submitBtn');
 var retryBtn = document.getElementById('retryBtn');
+var posterBtn = document.getElementById('posterBtn');
 
 form.addEventListener('submit', function(e) {
   e.preventDefault();
@@ -683,6 +776,9 @@ form.addEventListener('submit', function(e) {
       });
       result.innerHTML = html;
       retryBtn.style.display = 'block';
+      posterBtn.style.display = 'block';
+      // 缓存海报数据
+      posterBtn._data = {name:name, birthday:birthday, mood:mood, lines:lines};
     } catch (err) {
       loading.classList.remove('active');
       submitBtn.disabled = false;
@@ -694,6 +790,8 @@ form.addEventListener('submit', function(e) {
 retryBtn.addEventListener('click', function(){
   result.className = 'result'; result.innerHTML = '';
   retryBtn.style.display = 'none';
+  posterBtn.style.display = 'none';
+  posterBtn._data = null;
   form.reset();
   document.getElementById('name').focus();
 });
@@ -709,6 +807,101 @@ function escapeHtml(text) {
   d.textContent = text;
   return d.innerHTML;
 }
+
+// ============================================================
+// 海报生成
+// ============================================================
+posterBtn.addEventListener('click', function() {
+  var data = posterBtn._data;
+  if (!data) return;
+
+  posterBtn.disabled = true;
+  posterBtn.textContent = '⏳ 正在生成海报...';
+
+  var poster = document.getElementById('poster');
+  var wrap = document.getElementById('posterWrap');
+
+  // 构建海报 HTML
+  var dt = new Date(data.birthday + 'T00:00:00');
+  var zodiac = ['猴','鸡','狗','猪','鼠','牛','虎','兔','龙','蛇','马','羊'];
+  var animal = zodiac[dt.getFullYear() % 12];
+  var today = new Date();
+  var dateStr = today.getFullYear() + '.' + (today.getMonth()+1) + '.' + today.getDate();
+
+  // 生成海报背景星星
+  var starsHtml = '';
+  for (var i = 0; i < 50; i++) {
+    var sx = Math.random()*100, sy = Math.random()*100;
+    var ss = Math.random()*2+0.5;
+    starsHtml += '<div class="poster-star" style="left:'+sx+'%;top:'+sy+'%;width:'+ss+'px;height:'+ss+'px;--pdur:'+(Math.random()*3+2)+'s;--pdelay:'+(Math.random()*4)+'s;"></div>';
+  }
+
+  var fortuneHtml = '';
+  data.lines.forEach(function(line) {
+    var t = line.trim();
+    if (t) fortuneHtml += '<div class="poster-line">' + escapeHtml(t) + '</div>';
+  });
+
+  poster.innerHTML =
+    '<div class="poster-stars">'+starsHtml+'</div>'+
+    '<div class="poster-border"></div>'+
+    '<div class="poster-corner pc-tl"></div>'+
+    '<div class="poster-corner pc-tr"></div>'+
+    '<div class="poster-corner pc-bl"></div>'+
+    '<div class="poster-corner pc-br"></div>'+
+    '<div class="poster-inner">'+
+      '<div class="poster-header">'+
+        '<div class="ph-icon">🔮☯🔮</div>'+
+        '<div class="ph-title">玄不救非 · AI算命大师</div>'+
+        '<div class="ph-divider"></div>'+
+      '</div>'+
+      '<div class="poster-meta">'+
+        '<div>📛 <span class="ph-name">'+escapeHtml(data.name)+'</span></div>'+
+        '<div>🎂 '+escapeHtml(data.birthday)+' · 属'+animal+'</div>'+
+        '<div>📅 占卜日期：'+dateStr+'</div>'+
+      '</div>'+
+      '<div class="poster-fortune">'+fortuneHtml+'</div>'+
+      '<div class="poster-footer">'+
+        '<div class="pf-brand">🔮 赛博玄学，仅供娱乐</div>'+
+        '<div>☯ 你才是自己命运的主宰 ☯</div>'+
+      '</div>'+
+    '</div>';
+
+  // 让海报进入可见区域以便截图
+  wrap.style.left = '0';
+  wrap.style.top = '0';
+
+  // 用 html2canvas 截图
+  setTimeout(function() {
+    if (typeof html2canvas === 'undefined') {
+      wrap.style.left = '-9999px';
+      posterBtn.disabled = false;
+      posterBtn.textContent = '📸 生成海报 · 发朋友圈';
+      alert('海报库加载失败，请检查网络后刷新页面重试。');
+      return;
+    }
+    html2canvas(poster, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true,
+      allowTaint: true
+    }).then(function(canvas) {
+      wrap.style.left = '-9999px';
+      // 触发下载
+      var link = document.createElement('a');
+      link.download = '赛博算命_' + data.name + '_' + dateStr.replace(/\./g,'') + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      posterBtn.disabled = false;
+      posterBtn.textContent = '📸 生成海报 · 发朋友圈';
+    }).catch(function(err) {
+      wrap.style.left = '-9999px';
+      posterBtn.disabled = false;
+      posterBtn.textContent = '📸 生成海报 · 发朋友圈';
+      alert('海报生成失败，请重试～');
+    });
+  }, 300);
+});
 </script>
 </body>
 </html>
