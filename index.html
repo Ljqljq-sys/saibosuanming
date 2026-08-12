@@ -179,10 +179,10 @@
       <div class="card-label">赛 博 算 命</div>
       <div class="card-desc">AI 紫微斗数 · 即时起卦</div>
     </a>
-    <a class="card card-right" href="lottery.html" id="cardLottery">
+    <a class="card card-right" href="lottery.html">
       <span class="card-icon">🏮</span>
       <div class="card-label">抽　　　签</div>
-      <div class="card-desc">观音灵签 · 每日一签</div>
+      <div class="card-desc">每日一签 · 六签筒</div>
     </a>
   </div>
 
@@ -337,31 +337,6 @@ var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matche
   loop();
 })();
 
-// ============================================================
-// 抽签功能检测
-// ============================================================
-(function() {
-  var card = document.getElementById('cardLottery');
-  var toast = document.getElementById('toast');
-  var timer = null;
-
-  function show(msg) {
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(timer);
-    timer = setTimeout(function() { toast.classList.remove('show'); }, 2500);
-  }
-
-  card.addEventListener('click', function(e) {
-    e.preventDefault();
-    fetch('lottery.html', { method: 'HEAD' })
-      .then(function(res) {
-        if (res.ok) { window.location.href = 'lottery.html'; }
-        else { show('🏮 该功能尚在开发中，敬请期待'); }
-      })
-      .catch(function() { show('🏮 该功能尚在开发中，敬请期待'); });
-  });
-})();
 </script>
 
 </body>

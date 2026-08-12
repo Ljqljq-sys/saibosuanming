@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>赛博抽签 · 玄不救非</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  :root {
+    --purple: #9d4edd;
+    --pink: #e040fb;
+    --cyan: #00f5ff;
+    --card-bg: rgba(15, 5, 30, 0.82);
+    --gold: #f0c040;
+    --red: #ff5577;
+    --green: #55ddaa;
+    --orange: #ff8844;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: radial-gradient(ellipse at 50% 60%, #14082a 0%, #0a0015 45%, #050510 100%);
+    color: #e0d0f0;
+    font-family: "Microsoft YaHei","PingFang SC","Helvetica Neue",sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    overflow-x:hidden; position:relative;
+    padding: 80px 20px 40px;
+  }
+
+  /* ===== Canvas 背景 ===== */
+  #gridCanvas, #rainCanvas {
+    position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;
+  }
+  #gridCanvas  { z-index:0; }
+  #rainCanvas { z-index:1; }
+
+  /* ===== 光晕 ===== */
+  .glow-orb {
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:min(500px,80vw); height:min(500px,80vw);
+    background:radial-gradient(circle, rgba(157,78,221,0.14) 0%, rgba(0,245,255,0.04) 30%, transparent 70%);
+    border-radius:50%; filter:blur(60px); z-index:0; pointer-events:none;
+    animation:orbPulse 4s ease-in-out infinite;
+  }
+  @keyframes orbPulse {
+    0%,100% { transform:translate(-50%,-50%) scale(0.9); opacity:0.5; }
+    50%     { transform:translate(-50%,-50%) scale(1.3); opacity:1; }
+  }
+
+  /* ===== 顶栏 ===== */
+  .top-bar {
+    position:fixed; top:0; left:0; right:0; z-index:10;
+    background:rgba(15,5,30,0.85); backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border-bottom:1px solid rgba(157,78,221,0.2);
+    padding:10px 20px; display:flex; align-items:center; justify-content:space-between;
+    font-size:13px;
+  }
+  .top-bar .counter { color:var(--cyan); font-family:'Orbitron',sans-serif; letter-spacing:1px; }
+  .top-bar .date   { color:rgba(160,144,192,0.5); font-size:11px; }
+  .back-btn {
+    font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px;
+    color:rgba(200,180,220,0.7); text-decoration:none;
+    padding:6px 16px; border:1px solid rgba(157,78,221,0.3);
+    border-radius:20px; transition:all 0.3s;
+  }
+  .back-btn:hover { color:#fff; border-color:var(--purple); box-shadow:0 0 12px rgba(157,78,221,0.3); }
+
+  /* ===== 主容器 ===== */
+  .main {
+    position:relative; z-index:3; text-align:center;
+    width:100%; max-width:660px;
+  }
+
+  .title {
+    font-family:'Orbitron','Microsoft YaHei',sans-serif;
+    font-size:clamp(22px,4vw,34px); font-weight:900; letter-spacing:4px;
+    color:#fff;
+    text-shadow:0 0 10px var(--purple),0 0 30px var(--purple),0 0 60px rgba(157,78,221,0.5);
+    margin-bottom:4px;
+    animation:titleGlow 2s ease-in-out infinite alternate;
+  }
+  @keyframes titleGlow {
+    from { text-shadow:0 0 10px var(--purple),0 0 30px var(--purple),0 0 60px rgba(157,78,221,0.5); }
+    to   { text-shadow:0 0 20px var(--purple),0 0 50px var(--pink),0 0 80px rgba(224,64,251,0.6); }
+  }
+  .subtitle {
+    font-family:'Orbitron',sans-serif;
+    font-size:clamp(10px,1.6vw,12px); letter-spacing:5px;
+    color:rgba(160,144,192,0.5); margin-bottom:36px;
+  }
+
+  /* ===== 卡片网格 ===== */
+  .cards {
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:18px;
+  }
+
+  .card {
+    background:var(--card-bg);
+    border:1px solid rgba(157,78,221,0.25);
+    border-radius:18px; padding:28px 16px 22px;
+    cursor:pointer; position:relative; overflow:hidden;
+    transition:transform 0.35s cubic-bezier(.34,1.56,.64,1), box-shadow 0.35s, border-color 0.35s, opacity 0.35s, filter 0.35s;
+    opacity:0; transform:translateY(30px);
+    animation:fadeInUp 0.6s ease forwards;
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    user-select:none; -webkit-tap-highlight-color:transparent;
+  }
+  .card:nth-child(1) { animation-delay:0.00s; }
+  .card:nth-child(2) { animation-delay:0.07s; }
+  .card:nth-child(3) { animation-delay:0.14s; }
+  .card:nth-child(4) { animation-delay:0.21s; }
+  .card:nth-child(5) { animation-delay:0.28s; }
+  .card:nth-child(6) { animation-delay:0.35s; }
+  @keyframes fadeInUp {
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  .card::before {
+    content:''; position:absolute; top:0; left:0; width:100%; height:100%;
+    background:radial-gradient(ellipse at 50% 0%, rgba(157,78,221,0.10) 0%, transparent 70%);
+    opacity:0; transition:opacity 0.35s;
+  }
+  .card:hover { transform:translateY(-8px); box-shadow:0 0 28px rgba(157,78,221,0.3),0 0 50px rgba(224,64,251,0.12),0 8px 30px rgba(0,0,0,0.5); border-color:rgba(157,78,221,0.6); }
+  .card:hover::before { opacity:1; }
+  .card:active { transform:scale(0.95) translateY(-4px); transition:transform 0.1s; }
+
+  /* 锁定状态 */
+  .card.locked {
+    opacity:0.5; cursor:default; filter:grayscale(0.35);
+  }
+  .card.locked:hover { transform:none; box-shadow:none; border-color:rgba(157,78,221,0.25); }
+  .card.locked:hover::before { opacity:0; }
+  .card.locked::after {
+    content:'🔒'; position:absolute; top:10px; right:14px; font-size:14px;
+    opacity:0.7; z-index:2;
+  }
+  /* 已抽标记 */
+  .card.done::after {
+    content:'✅'; position:absolute; top:10px; right:14px; font-size:14px;
+    opacity:0.8; z-index:2;
+  }
+
+  .card-icon {
+    font-size:clamp(32px,5.5vw,46px); margin-bottom:8px;
+    position:relative; z-index:1; display:block;
+    transition:transform 0.35s;
+  }
+  .card:hover .card-icon { transform:scale(1.1); }
+  .card.locked:hover .card-icon { transform:none; }
+
+  .card-label {
+    font-family:'Orbitron','Microsoft YaHei',sans-serif;
+    font-size:clamp(13px,2vw,16px); font-weight:700; letter-spacing:2px;
+    position:relative; z-index:1;
+  }
+  .card-desc {
+    font-size:11px; color:#706090; margin-top:4px;
+    position:relative; z-index:1;
+  }
+
+  /* 摇晃动画 */
+  .card.shaking {
+    animation:cardShake 0.5s ease-in-out !important;
+  }
+  @keyframes cardShake {
+    0%,100% { transform:translateX(0); }
+    10%,30%,50%,70%,90% { transform:translateX(-6px); }
+    20%,40%,60%,80% { transform:translateX(6px); }
+  }
+  /* 图标飞出 */
+  .card .card-icon.flyOut {
+    animation:signFlyOut 0.6s ease-out forwards;
+  }
+  @keyframes signFlyOut {
+    0%   { transform:scale(1); opacity:1; }
+    50%  { transform:scale(2.5) translateY(-20px); opacity:0.8; }
+    100% { transform:scale(3.5) translateY(-60px); opacity:0; }
+  }
+
+  /* ===== 结果弹窗 ===== */
+  .modal-overlay {
+    position:fixed; inset:0; z-index:50; background:rgba(0,0,0,0.78);
+    backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition:opacity 0.3s;
+  }
+  .modal-overlay.active { opacity:1; pointer-events:auto; }
+
+  .modal {
+    background:var(--card-bg);
+    border:1px solid rgba(157,78,221,0.35);
+    border-radius:20px; padding:32px 24px 24px;
+    max-width:440px; width:90%; max-height:85vh; overflow-y:auto;
+    position:relative;
+    transform:translateY(30px);
+    transition:transform 0.35s cubic-bezier(.34,1.56,.64,1);
+  }
+  .modal-overlay.active .modal { transform:translateY(0); }
+
+  /* 等级边框颜色 */
+  .modal.level-大吉 { border-color:rgba(240,192,64,0.7); box-shadow:0 0 30px rgba(240,192,64,0.2); }
+  .modal.level-吉   { border-color:rgba(0,245,255,0.6); box-shadow:0 0 20px rgba(0,245,255,0.15); }
+  .modal.level-中吉 { border-color:rgba(85,221,170,0.6); box-shadow:0 0 20px rgba(85,221,170,0.12); }
+  .modal.level-末吉 { border-color:rgba(221,170,85,0.5); }
+  .modal.level-凶   { border-color:rgba(255,136,68,0.6); box-shadow:0 0 20px rgba(255,136,68,0.12); }
+  .modal.level-大凶 { border-color:rgba(255,85,119,0.7); box-shadow:0 0 30px rgba(255,85,119,0.2); }
+  .modal.level-？？？ { border-color:#00ff00; box-shadow:0 0 40px rgba(0,255,0,0.3); }
+
+  .modal-header {
+    text-align:center; margin-bottom:20px;
+  }
+  .modal-level {
+    font-family:'Orbitron',sans-serif; font-size:28px; font-weight:900; letter-spacing:3px;
+    margin-bottom:4px;
+  }
+  .modal-type {
+    font-size:12px; color:#706090; letter-spacing:2px;
+  }
+  .modal-divider {
+    width:60px; height:1px; margin:16px auto;
+    background:linear-gradient(90deg, transparent, rgba(157,78,221,0.5), transparent);
+  }
+  .modal-text {
+    font-size:15px; line-height:1.8; text-align:center;
+    color:#d0c8e4; margin-bottom:20px;
+    min-height:50px;
+  }
+  .modal-lucky-row {
+    display:flex; gap:12px; justify-content:center; margin-bottom:20px;
+  }
+  .modal-lucky-item {
+    flex:1; max-width:140px; background:rgba(157,78,221,0.08);
+    border-radius:12px; padding:12px; text-align:center;
+    border:1px solid rgba(157,78,221,0.15);
+  }
+  .modal-lucky-item .swatch {
+    display:inline-block; width:22px; height:22px; border-radius:50%;
+    vertical-align:middle; margin-right:6px;
+  }
+  .modal-lucky-item .lucky-label { font-size:10px; color:#706090; letter-spacing:1px; margin-bottom:4px; }
+  .modal-lucky-item .lucky-val  { font-size:13px; color:#e0d0f0; font-family:'Orbitron',sans-serif; }
+
+  .modal-advice {
+    display:flex; gap:12px; margin-bottom:20px;
+  }
+  .modal-do, .modal-dont {
+    flex:1; padding:12px; border-radius:12px; font-size:12px; line-height:1.6;
+  }
+  .modal-do   { background:rgba(85,221,170,0.08); border:1px solid rgba(85,221,170,0.2); color:#a0e8cc; }
+  .modal-dont { background:rgba(255,85,119,0.08); border:1px solid rgba(255,85,119,0.2); color:#f0a0b0; }
+
+  .modal-btns {
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+  }
+  .btn {
+    font-family:'Orbitron','Microsoft YaHei',sans-serif; font-size:12px; letter-spacing:2px;
+    padding:10px 20px; border-radius:25px; cursor:pointer; border:none;
+    transition:all 0.3s; font-weight:700;
+  }
+  .btn-close {
+    background:rgba(255,255,255,0.06); color:rgba(200,180,220,0.6);
+    border:1px solid rgba(157,78,221,0.2);
+  }
+  .btn-close:hover { background:rgba(255,255,255,0.1); color:#e0d0f0; }
+  .btn-poster {
+    background:linear-gradient(135deg, rgba(157,78,221,0.3), rgba(224,64,251,0.2));
+    color:#e0d0f0; border:1px solid rgba(224,64,251,0.3);
+  }
+  .btn-poster:hover { box-shadow:0 0 20px rgba(157,78,221,0.35); transform:translateY(-2px); }
+  .btn-poster:active { transform:scale(0.95); }
+  .btn-poster:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+
+  /* ===== 隐藏签覆盖层 ===== */
+  .hidden-overlay {
+    position:fixed; inset:0; z-index:100; background:#000;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity 0.2s;
+  }
+  .hidden-overlay.active { opacity:1; pointer-events:auto; }
+  #hiddenSignCanvas {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+  }
+  .hidden-text {
+    position:relative; z-index:2;
+    font-family:'Courier New',monospace; font-size:clamp(14px,2.5vw,18px);
+    color:#00ff00; text-align:center; line-height:2;
+    text-shadow:0 0 10px #00ff00,0 0 30px #00ff00,0 0 60px rgba(0,255,0,0.5);
+    padding:20px; max-width:500px; white-space:pre-wrap;
+    min-height:80px;
+  }
+  .hidden-close {
+    position:relative; z-index:2; margin-top:30px;
+    font-family:'Courier New',monospace; font-size:14px; letter-spacing:3px;
+    color:#00ff00; background:transparent; border:1px solid #00ff00;
+    padding:10px 30px; border-radius:25px; cursor:pointer;
+    opacity:0; transition:opacity 0.6s;
+    text-shadow:0 0 8px #00ff00;
+  }
+  .hidden-close.show { opacity:1; }
+  .hidden-close:hover { background:rgba(0,255,0,0.1); box-shadow:0 0 20px rgba(0,255,0,0.3); }
+
+  /* ===== Toast ===== */
+  .toast {
+    position:fixed; bottom:40px; left:50%; transform:translateX(-50%);
+    background:rgba(30,10,50,0.95); color:#e0d0f0;
+    padding:12px 24px; border-radius:30px; font-size:14px;
+    border:1px solid rgba(224,64,251,0.4);
+    box-shadow:0 0 20px rgba(224,64,251,0.2);
+    z-index:999; opacity:0; pointer-events:none;
+    transition:opacity 0.4s, transform 0.4s;
+    transform:translateX(-50%) translateY(20px);
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ===== 海报渲染区 (离屏) ===== */
+  #posterWrap {
+    position:fixed; left:-9999px; top:0; z-index:-1;
+  }
+  .poster {
+    width:420px; background:linear-gradient(160deg, #0d0020 0%, #12062a 30%, #0a0418 100%);
+    padding:28px 24px; position:relative; overflow:hidden;
+  }
+  .poster-border {
+    position:absolute; top:10px; left:10px; right:10px; bottom:10px;
+    border:1px solid rgba(157,78,221,0.3); pointer-events:none;
+  }
+  .poster-corner {
+    position:absolute; width:24px; height:24px; pointer-events:none;
+  }
+  .pc-tl { top:6px; left:6px; border-top:2px solid var(--gold); border-left:2px solid var(--gold); }
+  .pc-tr { top:6px; right:6px; border-top:2px solid var(--gold); border-right:2px solid var(--gold); }
+  .pc-bl { bottom:6px; left:6px; border-bottom:2px solid var(--gold); border-left:2px solid var(--gold); }
+  .pc-br { bottom:6px; right:6px; border-bottom:2px solid var(--gold); border-right:2px solid var(--gold); }
+  .poster-stars { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+  .poster-star {
+    position:absolute; width:2px; height:2px; background:#fff; border-radius:50%;
+    animation:psTwinkle 2s ease-in-out infinite;
+  }
+  @keyframes psTwinkle {
+    0%,100% { opacity:0.3; }
+    50%     { opacity:1; }
+  }
+  .poster-inner { position:relative; z-index:1; }
+  .poster-header { text-align:center; margin-bottom:18px; }
+  .ph-icon { font-size:36px; margin-bottom:4px; }
+  .ph-title {
+    font-family:'Orbitron',sans-serif; font-size:16px; font-weight:900;
+    letter-spacing:4px; color:var(--gold);
+  }
+  .ph-divider {
+    width:40px; height:1px; margin:10px auto;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  }
+  .poster-meta { text-align:center; font-size:11px; color:#8090a0; margin-bottom:16px; line-height:1.8; }
+  .poster-level {
+    text-align:center; font-family:'Orbitron',sans-serif; font-size:36px; font-weight:900;
+    letter-spacing:4px; margin-bottom:4px;
+  }
+  .poster-level-sub {
+    text-align:center; font-size:11px; color:#706090; letter-spacing:2px; margin-bottom:16px;
+  }
+  .poster-fortune-text {
+    text-align:center; font-size:14px; color:#d0c8e4; line-height:1.8; margin-bottom:18px;
+    padding:0 10px;
+  }
+  .poster-lucky-row {
+    display:flex; gap:10px; margin-bottom:16px;
+  }
+  .poster-lucky-item {
+    flex:1; text-align:center; padding:10px 8px;
+    background:rgba(157,78,221,0.08); border-radius:10px;
+    border:1px solid rgba(157,78,221,0.15);
+  }
+  .poster-lucky-item .pl-swatch {
+    display:inline-block; width:18px; height:18px; border-radius:50%;
+    vertical-align:middle; margin-right:6px;
+  }
+  .poster-lucky-item .pl-label { font-size:10px; color:#706090; letter-spacing:1px; }
+  .poster-lucky-item .pl-val { font-size:13px; color:#e0d0f0; font-family:'Orbitron',sans-serif; }
+  .poster-advice { margin-bottom:18px; }
+  .poster-do, .poster-dont {
+    font-size:11px; padding:8px 12px; border-radius:8px; margin-bottom:6px;
+  }
+  .poster-do   { color:#a0e8cc; background:rgba(85,221,170,0.06); border:1px solid rgba(85,221,170,0.15); }
+  .poster-dont { color:#f0a0b0; background:rgba(255,85,119,0.06); border:1px solid rgba(255,85,119,0.15); }
+  .poster-footer { text-align:center; font-size:10px; color:#504060; line-height:2; }
+  .pf-brand { font-family:'Orbitron',sans-serif; letter-spacing:2px; font-size:11px; color:#706090; }
+  .pf-watermark {
+    font-size:clamp(18px,5vw,28px); color:rgba(255,255,255,0.04);
+    position:absolute; bottom:90px; left:50%; transform:translateX(-50%) rotate(-15deg);
+    letter-spacing:8px; font-weight:900; pointer-events:none; white-space:nowrap;
+  }
+  .poster-qr { margin-top:10px; }
+
+  /* ===== 响应式 ===== */
+  @media (max-width:560px) {
+    .cards { grid-template-columns:repeat(2, 1fr); gap:12px; }
+    .card { padding:22px 10px 16px; border-radius:14px; }
+    .card:hover { transform:translateY(-5px); }
+    .card:active { transform:scale(0.97) translateY(-3px); }
+    .modal { padding:24px 16px 18px; }
+    .modal-level { font-size:22px; }
+    .modal-text { font-size:14px; }
+    .modal-advice { flex-direction:column; }
+    .modal-lucky-row { flex-wrap:wrap; }
+    .top-bar { padding:8px 12px; font-size:11px; }
+    #gridCanvas, #rainCanvas { opacity:0.5; }
+  }
+  @media (max-width:380px) {
+    .cards { grid-template-columns:repeat(2, 1fr); gap:8px; }
+    .card { padding:16px 6px 12px; }
+  }
+
+  /* ===== 减少动画 ===== */
+  @media (prefers-reduced-motion: reduce) {
+    .glow-orb { animation:none; opacity:0.5; }
+    .title { animation:none; }
+    .card { animation:none; opacity:1; transform:none; }
+    .card.shaking { animation:none !important; }
+    .card .card-icon.flyOut { animation:none; }
+    .modal { transition:none; }
+    .modal-overlay { transition:none; }
+    #gridCanvas, #rainCanvas { opacity:0.3; }
+  }
+
+  /* 响应式 - 顶栏下方留白 */
+  @media (max-width:560px) {
+    body { padding-top:70px; }
+  }
+
+  /* ===== 滚动条美化 ===== */
+  .modal::-webkit-scrollbar { width:4px; }
+  .modal::-webkit-scrollbar-thumb { background:rgba(157,78,221,0.3); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<!-- 背景 -->
+<canvas id="gridCanvas"></canvas>
+<canvas id="rainCanvas"></canvas>
+<div class="glow-orb"></div>
+
+<!-- 顶栏 -->
+<div class="top-bar">
+  <a class="back-btn" href="index.html">◂ 首页</a>
+  <span class="counter" id="counter">今日已抽 0/6</span>
+  <span class="date" id="dateDisplay"></span>
+</div>
+
+<!-- 主内容 -->
+<div class="main">
+  <h1 class="title">赛 博 抽 签</h1>
+  <p class="subtitle">// LOTTERY_PROTOCOL_ACTIVE //</p>
+
+  <div class="cards" id="cards">
+    <div class="card" data-type="wealth">
+      <span class="card-icon">💰</span>
+      <div class="card-label">财 运</div>
+      <div class="card-desc">财源滚滚签</div>
+    </div>
+    <div class="card" data-type="love">
+      <span class="card-icon">🌸</span>
+      <div class="card-label">桃 花</div>
+      <div class="card-desc">姻缘红线签</div>
+    </div>
+    <div class="card" data-type="study">
+      <span class="card-icon">📚</span>
+      <div class="card-label">学 业</div>
+      <div class="card-desc">金榜题名签</div>
+    </div>
+    <div class="card" data-type="career">
+      <span class="card-icon">💼</span>
+      <div class="card-label">事 业</div>
+      <div class="card-desc">步步高升签</div>
+    </div>
+    <div class="card" data-type="general">
+      <span class="card-icon">🎰</span>
+      <div class="card-label">综 合</div>
+      <div class="card-desc">万事如意签</div>
+    </div>
+    <div class="card" data-type="random">
+      <span class="card-icon">🌌</span>
+      <div class="card-label">随 机</div>
+      <div class="card-desc">天机不可测</div>
+    </div>
+  </div>
+</div>
+
+<!-- 结果弹窗 -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-level" id="modalLevel"></div>
+      <div class="modal-type" id="modalType"></div>
+    </div>
+    <div class="modal-divider"></div>
+    <div class="modal-text" id="modalText"></div>
+    <div class="modal-lucky-row" id="modalLucky"></div>
+    <div class="modal-advice" id="modalAdvice"></div>
+    <div class="modal-btns">
+      <button class="btn btn-poster" id="modalPosterBtn">📸 生成海报</button>
+      <button class="btn btn-close" id="modalCloseBtn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 隐藏签覆盖层 -->
+<div class="hidden-overlay" id="hiddenOverlay">
+  <canvas id="hiddenSignCanvas"></canvas>
+  <div class="hidden-text" id="hiddenText"></div>
+  <button class="hidden-close" id="hiddenCloseBtn">关 闭</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 海报离屏渲染 -->
+<div id="posterWrap"><div class="poster" id="poster"></div></div>
+
+<script>
+// ============================================================
+// A: 全局状态
+// ============================================================
+var Lottery = {
+  state: {
+    redrawCount: 0,
+    lastResult: null,
+    isAnimating: false
+  }
+};
+
+var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ============================================================
+// B: 工具函数
+// ============================================================
+function hashStr(s) {
+  var h = 0;
+  for (var i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+// mulberry32 PRNG — 确定性伪随机数生成器
+function createRNG(seed) {
+  var s = seed | 0;
+  return function() {
+    s = (s + 0x6D2B79F5) | 0;
+    var t = Math.imul(s ^ (s >>> 15), s | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffle(arr, seed) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = (seed * (i + 1) * 31) % (i + 1);
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  var c = (1 - Math.abs(2 * l - 1)) * s;
+  var x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  var m = l - c / 2;
+  var r, g, b;
+  if (h < 60) { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else { r = c; g = 0; b = x; }
+  var toHex = function(v) {
+    var hx = Math.round((v + m) * 255).toString(16);
+    return hx.length === 1 ? '0' + hx : hx;
+  };
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+function getColorName(h) {
+  var colors = [
+    {n:'赛博红',  h:0},  {n:'赤橙',    h:15}, {n:'日落橙', h:30},
+    {n:'琥珀金', h:45},  {n:'赛博金',  h:55}, {n:'荧光黄', h:65},
+    {n:'霓虹绿', h:90},  {n:'赛博绿',  h:120},{n:'青碧',   h:150},
+    {n:'极客青', h:175}, {n:'数据蓝',  h:200},{n:'赛博蓝', h:220},
+    {n:'矩阵紫', h:260}, {n:'赛博紫',  h:280},{n:'霓虹粉', h:310},
+    {n:'赛博粉', h:330}, {n:'幻紫',    h:345},{n:'赛博红', h:360}
+  ];
+  var best = colors[0], bestD = 360;
+  for (var i = 0; i < colors.length; i++) {
+    var d = Math.abs(h - colors[i].h);
+    if (d < bestD) { bestD = d; best = colors[i]; }
+  }
+  return best.n;
+}
+
+function getNumComment(n) {
+  var special = {
+    1:'万物之始',7:'天选之数',8:'发发发',9:'九五之尊',13:'禁忌数字',
+    14:'双重幸运',21:'黑杰克',23:'乔丹之魂',27:'三重九',33:'大师数字',
+    36:'天罡之数',42:'宇宙终极答案',49:'七七之数',52:'扑克之魂',
+    55:'双五',64:'卦象之数',66:'六六大顺',69:'阴阳调和',72:'地煞之数',
+    77:'双倍天选',81:'九九归一',88:'双发',96:'三十二乘三',99:'极数'
+  };
+  if (special[n]) return special[n];
+  if (n <= 9) return '小吉之数';
+  if (n <= 20) return '中吉之数';
+  if (n <= 40) return '上吉之数';
+  if (n <= 60) return '大吉之数';
+  if (n <= 80) return '上上之数';
+  return '极上之数';
+}
+
+function escapeHtml(text) {
+  var d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+function showToast(msg, duration) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(function() { t.classList.remove('show'); }, duration || 2500);
+}
+
+// ============================================================
+// C: 签文数据库 FORTUNE_DB + 宜忌
+// ============================================================
+
+// 生成占位签文
+function genPlaceholders(prefix, count, level) {
+  var r = [];
+  for (var i = 1; i <= count; i++) {
+    r.push(prefix + '（第' + i + '签·' + level + '）');
+  }
+  return r;
+}
+
+// 财运签
+var FORTUNE_WEALTH = {
+  "大吉": [
+    "财星高照，正财偏财两旺。贵人来自东南方，把握良机，今日宜投资理财。",
+    "金玉满堂，横财就手。旧账可清，新源可开，财运指数爆表。",
+    "紫气东来，有意外之财入账。可能是红包、退款或久未收回的欠款。",
+    "财路畅通，今日适合谈判薪资、签订合同，结果将超预期。",
+    "黄金万两，财神爷今日点名眷顾。但切记见好就收，贪心反失。"
+  ].concat(genPlaceholders("财运极佳，好运连连，心诚则灵", 10, "大吉")),
+  "吉": [
+    "财运平稳向好，正财收入稳定。适合做长期理财规划，不宜冒险投机。",
+    "小有进账，虽非大富大贵，但也足以让心情愉悦。建议储蓄一部分。",
+    "今日财运尚可，适合整理账单、核对账目，会发现漏掉的收入。",
+    "偏财运不错，抽奖、彩票或红包有意外惊喜，但金额不大。",
+    "收支平衡偏盈，适合与朋友AA聚餐，可能会有请客回礼。"
+  ].concat(genPlaceholders("财运尚佳，稳中有升，保持平常心", 10, "吉")),
+  "中吉": [
+    "财运一般，没有大的波动。今日不宜做大额消费决策。",
+    "进账与支出持平，建议今天以守财为主，暂时观望。",
+    "正财稳定但偏财不利。专心做好本职工作，别想着一夜暴富。",
+    "小财可求，大财无望。今天适合做预算和财务规划。",
+    "财路平平，但也没有破财之虞。平淡是福，知足常乐。"
+  ].concat(genPlaceholders("财运中庸，无风无浪，宜守不宜攻", 10, "中吉")),
+  "末吉": [
+    "财运略显低迷，今日不宜投资、借贷或大额消费。守住钱包为上策。",
+    "可能有一些意外的小额支出，比如维修费、人情往来，提前做好心理准备。",
+    "正财尚可但偏财不利，今天不要买彩票或参与博彩类活动。",
+    "收支略有赤字，建议取消不必要的订阅和冲动消费。",
+    "财运微薄，但至少没有大的破财风险。精打细算可安然度过。"
+  ].concat(genPlaceholders("财运稍弱，谨慎理财，能省则省", 10, "末吉")),
+  "凶": [
+    "财运不佳，今日切忌冲动消费和投资。有人可能借钱不还，勿轻易借出。",
+    "有破财风险！出门注意钱包手机，网上谨防诈骗链接。",
+    "财运低迷，可能会有意料之外的账单。建议延迟非必要支出。",
+    "今日财运告急，不宜逛街购物，远离直播间和打折促销。",
+    "财星黯淡，做生意的注意回款问题，打工的注意考勤扣款。"
+  ].concat(genPlaceholders("财运不济，捂紧钱包，谨防破财", 10, "凶")),
+  "大凶": [
+    "财运告急！今日极易破财，请避免一切投资、借贷、担保行为。",
+    "财星陨落，可能有重大财务损失。务必检查账户安全，谨防电信诈骗。",
+    "破财之兆强烈，钱包要捂紧，合同要细看，不要为任何人做财务担保。",
+    "财运大凶，建议今天只使用现金，断绝一切线上支付以防冲动。",
+    "今日财运触底，但触底之后便是反弹。保持冷静，不做任何财务决策。"
+  ].concat(genPlaceholders("财运大凶，破财之兆，万事小心为上", 10, "大凶"))
+};
+
+// 桃花签
+var FORTUNE_LOVE = {
+  "大吉": [
+    "桃花盛开，红鸾星动。单身者今日有望邂逅良缘，注意身边穿暖色系衣服的人。",
+    "爱情运势极佳，有情人心意相通。适合表白、求婚或策划浪漫约会。",
+    "桃花朵朵开，今天你的魅力值拉满。可能会同时收到多个人的好感信号。",
+    "姻缘大吉，月老今天专门为你牵了红线。大胆主动，幸福在等你。",
+    "感情升温的最佳时机。已有伴侣的人适合讨论未来规划，会得到积极回应。"
+  ].concat(genPlaceholders("桃花正旺，缘分天定，勇敢追爱", 10, "大吉")),
+  "吉": [
+    "爱情运势不错，单身者社交场合会有不错的邂逅机会。",
+    "与伴侣相处融洽，适合一起做饭、看电影，享受平淡中的甜蜜。",
+    "桃花小旺，可能会收到暧昧信号或表白。仔细分辨，真心还是玩笑。",
+    "感情运势向好，旧情复燃或冰释前嫌的机会来了。",
+    "今天适合与心仪的人聊天，微信或朋友圈互动效果很好。"
+  ].concat(genPlaceholders("桃花向暖，情路顺畅，珍惜眼前人", 10, "吉")),
+  "中吉": [
+    "感情运势平淡，单身者今日桃花不旺，宜静观其变。",
+    "与伴侣关系稳定，没有波澜。平凡的陪伴也是最长情的告白。",
+    "今日感情运势中等，适合独处反思，想清楚自己真正想要的感情是什么。",
+    "桃花未开，但也没有感情困扰。趁机提升自己，为更好的缘分做准备。",
+    "感情上无风无浪，适合和伴侣一起处理日常事务，增进默契。"
+  ].concat(genPlaceholders("桃花半开，不急不躁，一切随缘", 10, "中吉")),
+  "末吉": [
+    "桃花微淡，今日不宜表白或做重大感情决定。",
+    "与伴侣之间可能出现小摩擦，多半是误会，沟通即可化解。",
+    "单身者今日可能遇到烂桃花，注意辨别对方的真实意图。",
+    "感情运势稍弱，前任可能突然联系，建议保持距离。",
+    "今日容易因小事与伴侣争执，忍一时风平浪静。"
+  ].concat(genPlaceholders("桃花零星，擦亮双眼，勿为烂桃花所困", 10, "末吉")),
+  "凶": [
+    "桃花运低迷，今日切忌冲动表白，大概率被发好人卡。",
+    "感情上有口舌之争的风险，与伴侣沟通时注意语气和措辞。",
+    "单身者今日勿相亲、勿网恋，遇到的多半是照骗或海王。",
+    "感情运势欠佳，可能有第三者插足的风声，保持警惕但不疑神疑鬼。",
+    "今日不宜翻伴侣手机——看到了会难受，看不到会更难受。"
+  ].concat(genPlaceholders("桃花凋零，情路坎坷，宜静不宜动", 10, "凶")),
+  "大凶": [
+    "感情运势大凶！今日极易发生争吵甚至分手。切记控制情绪，口不择言伤人伤己。",
+    "桃花劫！今日遇到的异性多半带刺。已有伴侣的注意信任危机。",
+    "感情触礁预警，建议今天避免一切深入的情感讨论，延迟到明天再说。",
+    "大凶桃花，单身者今日出门遇渣男/渣女概率高达99.9%。宅家保平安。",
+    "爱情运触底，但触底也是转机。反思自己在感情中的问题，才能迎来新生。"
+  ].concat(genPlaceholders("桃花大凶，情劫当前，冷静方能渡劫", 10, "大凶"))
+};
+
+// 学业签
+var FORTUNE_STUDY = {
+  "大吉": [
+    "文昌星高照，学运亨通。今日考试运极佳，复习什么考什么，逢考必过。",
+    "思维敏捷，过目不忘。今天学什么都特别快，是攻克难题的绝佳时机。",
+    "学运爆表，论文答辩、面试笔试都能超常发挥。自信上场，稳操胜券。",
+    "智慧之门大开，今天钻研的难题会有突破性进展。灵感来自午后的咖啡时间。",
+    "文曲星加持，写作、编程、设计等创意学习效率翻倍。放飞你的才华吧。"
+  ].concat(genPlaceholders("学运顶峰，逢考必过，才华横溢", 10, "大吉")),
+  "吉": [
+    "学习效率不错，注意力集中。适合攻克一直卡住的难题。",
+    "今日适合备考复习，记忆效果比平时好，尤其适合背诵类科目。",
+    "学业运势良好，课堂上积极发言会受到老师青睐。",
+    "考试运不错，正常发挥即可取得理想成绩。考前记得吃早餐。",
+    "今天适合制定学习计划和目标，思路会比平时清晰很多。"
+  ].concat(genPlaceholders("学运向上，事半功倍，持之以恒", 10, "吉")),
+  "中吉": [
+    "学业运势一般，按部就班即可。今天不适合挑战太高难度的内容。",
+    "学习状态普通，建议先复习已掌握的知识，巩固基础。",
+    "考试运中等，不会超常也不会失常。保持平常心就是最好的策略。",
+    "今日适合与同学讨论交流，头脑风暴比独自钻研更有效。",
+    "学业平稳，适合整理笔记、归档资料，为后续学习打好基础。"
+  ].concat(genPlaceholders("学运中庸，稳扎稳打，厚积薄发", 10, "中吉")),
+  "末吉": [
+    "学业运势稍弱，注意力容易分散。建议用番茄钟法分段学习。",
+    "今日学习效率不高，与其硬撑不如休息充电。适当放松更有效。",
+    "考试运略差，可能会遇到偏题怪题。考前全面复习，别押题。",
+    "学习瓶颈期，不必焦虑。换个科目或休息一下再回来，会有新视角。",
+    "脑袋有点昏沉，可能是睡眠不足。今天早点睡，明天效率翻倍。"
+  ].concat(genPlaceholders("学运稍滞，勿焦勿躁，放松心态", 10, "末吉")),
+  "凶": [
+    "学业运势不佳，今日考试注意审题，粗心大意会让你丢掉不该丢的分。",
+    "学习状态低迷，注意力像金鱼一样短暂。建议减少社交媒体干扰。",
+    "今日容易犯低级错误，做作业或写报告时多加检查，别着急提交。",
+    "考试运下滑，可能会遇到不擅长的题型。深呼吸，先把会做的做完。",
+    "学业受阻，今天学什么都进不去脑子。不如放下书本去运动一下。"
+  ].concat(genPlaceholders("学运不济，戒骄戒躁，远离手机", 10, "凶")),
+  "大凶": [
+    "学业运大凶！今日考试切忌临时抱佛脚，作弊更是大忌——必定被抓。",
+    "学习状态触底，大脑像被格式化了。今天不适合任何重要考试或面试。",
+    "论文/作业有重大错误风险，今日提交前务必三审三校，最好请人帮忙检查。",
+    "考试大凶，可能会遭遇滑铁卢。但这也是发现知识盲区的机会，加油补上。",
+    "学业触底反弹的前夜。今天所有的不顺都是在为你储蓄反弹的能量。"
+  ].concat(genPlaceholders("学运大跌，考试慎行，稳字当头", 10, "大凶"))
+};
+
+// 事业签
+var FORTUNE_CAREER = {
+  "大吉": [
+    "事业运势如日中天，今日适合主动请缨、提出方案或争取晋升机会。",
+    "职场上贵人相助，可能是上司、同事或客户的一句话让你茅塞顿开。",
+    "事业运爆棚，今天谈合作、签合同、见客户都有超预期的好结果。",
+    "升职加薪的好时机！今天适合与领导谈职业规划，你的努力被看见了。",
+    "创业运势极佳，今天冒出的商业点子值得深入研究，可能是下一个风口。"
+  ].concat(genPlaceholders("事业顶峰，贵人相助，大展宏图", 10, "大吉")),
+  "吉": [
+    "事业运势良好，工作效率很高。适合处理积压的任务，今日事今日毕。",
+    "职场人际关系和谐，同事间的合作会很顺畅。适合开团队会议。",
+    "工作上有展示能力的机会，主动承担任务会让你脱颖而出。",
+    "今天适合做工作汇报和述职，逻辑清晰表达流畅，给人留下好印象。",
+    "事业稳中有升，做好手上的项目，机会自然会来找你。"
+  ].concat(genPlaceholders("事业向上，脚踏实地，水到渠成", 10, "吉")),
+  "中吉": [
+    "事业运势平稳，按部就班完成任务即可。今天不宜做冒险的职业决策。",
+    "工作节奏正常，没有惊喜也没有惊吓。适合做一些日常维护性的工作。",
+    "职场中规中矩的一天。保持低调，多听少说，观察周围动向。",
+    "今日适合整理工作文档、清理邮箱、规划下周任务。",
+    "事业运势中等，跳槽或转行暂不宜急，等待更好的时机。"
+  ].concat(genPlaceholders("事业平稳，不动如山，静观其变", 10, "中吉")),
+  "末吉": [
+    "事业运势稍弱，工作中可能遇到小阻碍。耐心处理，不要硬刚。",
+    "今日职场沟通成本较高，发送重要消息前多读一遍，避免歧义。",
+    "工作略有不顺，可能是系统故障或同事配合不到位。备好Plan B。",
+    "事业微滞，今天不适合提加薪或离职。忍一时风平浪静。",
+    "职场小人是非多，今天少参与八卦和办公室政治，明哲保身。"
+  ].concat(genPlaceholders("事业微阻，谨言慎行，明哲保身", 10, "末吉")),
+  "凶": [
+    "事业运势不佳，今日容易与同事或客户发生摩擦。控制情绪，保持专业。",
+    "工作压力山大，可能有突发任务打乱计划。列出优先级，逐一击破。",
+    "职场上小心背锅，重要沟通留书面记录。口头承诺今天尤其不可靠。",
+    "事业运走低，可能遇到客户投诉或领导批评。虚心接受，不必过度自责。",
+    "今日不宜做任何重大职业决定，跳槽、辞职、创业的想法先压一压。"
+  ].concat(genPlaceholders("事业坎坷，步步惊心，沉着应对", 10, "凶")),
+  "大凶": [
+    "事业运大凶！今日极易发生工作失误或职场冲突。重要决策推迟到明天。",
+    "裁员/降薪风险预警——并非一定发生，但今天要保持十二分警惕。",
+    "职场危机四伏，今天避免一切不必要的沟通。沉默是金，明哲保身。",
+    "事业运触底，可能会被甩锅或被抢功劳。记住：留得青山在，不怕没柴烧。",
+    "大凶过后必有大吉。今天的失败会变成明天的经验，咬牙撑过去。"
+  ].concat(genPlaceholders("事业大凶，危机四伏，稳字第一", 10, "大凶"))
+};
+
+// 综合签
+var FORTUNE_GENERAL = {
+  "大吉": [
+    "万事亨通，天地人和。今天做什么都顺风顺水，是黄道吉日中的黄道吉日。",
+    "运势如虹，百无禁忌。今天的你仿佛被宇宙加持了幸运BUFF。",
+    "大吉大利，今天宜开工、出行、签约、交友。万物皆利你，把握这天。",
+    "吉星高照，整体运势达到近期峰值。想做什么就去做，宇宙站在你这边。",
+    "天时地利人和，今天所有条件都对你有利。这是难得一遇的好日子。"
+  ].concat(genPlaceholders("万事大吉，天地同力，心想事成", 10, "大吉")),
+  "吉": [
+    "整体运势良好，诸事顺遂。今天是适合处理各种事务的高效日。",
+    "运势向上，心情愉快。今天适合社交聚会，会认识有趣的新朋友。",
+    "今日百事皆吉，出门遇贵人，办事遇绿灯。保持好心态，好运持续。",
+    "运势不错，适合把之前拖延的事情一次性解决掉。行动力满分。",
+    "吉星临门，今天你的直觉特别准，相信自己的第一感觉。"
+  ].concat(genPlaceholders("运势向好，顺风顺水，乘势而上", 10, "吉")),
+  "中吉": [
+    "整体运势平稳，宜按部就班。今天不适合冒险或做大改变。",
+    "运势中等偏上，虽然没有特别惊喜，但也无灾无难。平淡即福。",
+    "今日运势中庸，适合做常规事务。大事择吉日再办。",
+    "诸事平平，不必强求。保持低调，把该做的事情做好就行。",
+    "运势平平淡淡，但心态可以不平淡。给自己找点小确幸吧。"
+  ].concat(genPlaceholders("运势中庸，无惊无喜，知足常乐", 10, "中吉")),
+  "末吉": [
+    "运势稍弱，今日宜静不宜动。不适合出远门或做重要决定。",
+    "整体运势略低，可能会遇到一点小麻烦。不过都是可以轻松解决的程度。",
+    "万事皆小阻，但无大碍。保持耐心，一件一件来。",
+    "今日运势微淡，不适合主动出击。防守是最好的进攻。",
+    "小有不顺，但都没有到需要焦虑的程度。喝杯茶，放轻松。"
+  ].concat(genPlaceholders("运势稍低，诸事小心，退一步海阔天空", 10, "末吉")),
+  "凶": [
+    "整体运势欠佳，今日忌远行、忌争执、忌大额消费。低调做人。",
+    "诸事不太顺，可能会遇到堵车、排队、断网等小倒霉。深呼吸，别暴躁。",
+    "运势走低，今天做决定容易出错。重要的选择留到明天。",
+    "今日容易有口舌是非，少说话多做事。别人吵架别凑热闹。",
+    "运势不佳，但风水轮流转。今天的不顺是在替你挡灾，看开点。"
+  ].concat(genPlaceholders("运势走低，口舌是非多，少说为妙", 10, "凶")),
+  "大凶": [
+    "运势大凶！今日百事不宜——忌出行、忌签约、忌表白、忌网购。宅家保平安。",
+    "万事触礁预警，今天的正确打开方式就是：什么都不做。躺平即胜利。",
+    "大凶之日，诸事莫为。如果不得不做重要的事，务必三思后行。",
+    "运势谷底，但谷底的好处是：无论朝哪个方向走，都是上坡路。",
+    "今日诸事不宜，但过了今天就好。扛过去，明天一切都不同了。"
+  ].concat(genPlaceholders("运势大凶，百事不宜，宜躺平不宜动", 10, "大凶"))
+};
+
+// 随机签（复用综合签的结构但是标记为随机）
+var FORTUNE_RANDOM = FORTUNE_GENERAL; // 占位，实际会在 generateResult 中做特殊处理
+
+// 隐藏签文
+var HIDDEN_SIGNS = {
+  wealth: "⚠ 检测到财富漏洞 ⚠\n\n系统已被入侵...\n余额：∞（无穷大）\n其实都是假的，快去搬砖吧。🤑\n\n// 0xDEADBEEF //",
+  love: "⚠ 警告！检测到恋爱脑病毒 ⚠\n\n建议立即安装【单身防护墙】v99.9\n安装失败...\n原因：你的心太软了 💔\n\n// ERROR: LOVE_NOT_FOUND //",
+  study: "⚠ 知识库溢出 ⚠\n\n脑容量：已用 0.01%\n剩余空间：∞\n建议：反正学不完，先躺一会 📖\n\n// STACK_OVERFLOW_IN_BRAIN //",
+  career: "⚠ 996 协议激活 ⚠\n\n恭喜！你已被选为天选打工人\n工号：#00000001\n职位：首席摸鱼官\n月薪：∞（梦里啥都有）💼\n\n// WAKE_ME_UP_WHEN_SEPTEMBER_ENDS //",
+  general: "⚠ 系统核心被污染 ⚠\n\n正在重启命运引擎...\n重启失败！\n命运无法被算法预测——\n出门左转，好好生活吧 🌌\n\n// 404_FORTUNE_NOT_FOUND //",
+  random: "⚠ 随机数生成器暴走 ⚠\n\n所有概率坍缩为 50%——\n要么发生，要么不发生。\n薛定谔的签文：\n你同时抽到了大吉和大凶 🐱\n\n// QUANTUM_FORTUNE_DETECTED //"
+};
+
+// 签筒类型列表（用于随机签子类型选择）
+var LOTTERY_TYPES = ['wealth', 'love', 'study', 'career', 'general'];
+
+// 等级权重
+var LEVEL_WEIGHTS = [
+  { level:'大吉', weight:5,  color:'#f0c040', emoji:'🌟' },
+  { level:'吉',   weight:15, color:'#00f5ff', emoji:'✨' },
+  { level:'中吉', weight:40, color:'#55ddaa', emoji:'🍀' },
+  { level:'末吉', weight:25, color:'#ddaa55', emoji:'🌤'  },
+  { level:'凶',   weight:12, color:'#ff8844', emoji:'⚠'  },
+  { level:'大凶', weight:3,  color:'#ff5577', emoji:'💀' }
+];
+
+// 宜忌词库
+var DO_ACTIONS = [
+  "投资理财","学习充电","锻炼身体","社交聚会","表白心意",
+  "签订合同","装修搬家","购买彩票","尝试新事物","读书写字",
+  "给家里打电话","整理房间","制定计划","慈善捐款","追回欠款",
+  "养绿植","写日记","主动道歉","表白心意","尝试新菜",
+  "早起晨跑","面试求职","购买电子产品","发朋友圈","更换头像",
+  "报名课程","整理相册","泡茶冥想","约朋友吃饭","修手机电脑",
+  "做美甲","换发型","注册新账号","备份数据","健身房打卡",
+  "买本书","听播客","整理衣柜","做体检","种植多肉",
+  "报名考证","拍证件照","清理缓存","给朋友点赞","煮火锅",
+  "大扫除","买新衣服","自拍一张","写年终总结","存一笔钱",
+  "听一首老歌","早起看日出","做手工艺品","联系老朋友","完成待办事项"
+];
+var DONT_ACTIONS = [
+  "冲动消费","熬夜修仙","与人口角","大额借贷","盲目跳槽",
+  "暴饮暴食","酒后驾车","赌博博彩","轻信谣言","过度内卷",
+  "手贱拆家","挑战老板权威","刷信用卡","网上对线","试探前任",
+  "赖床到中午","拖延症发作","删重要文件","对家人发火","过度焦虑",
+  "冲动拉黑","深夜购物","吃太辣","走路看手机","参与八卦",
+  "暴晒不防晒","运动过度","不吃早饭","穿太少出门","频繁换密码",
+  "卸载杀毒软件","点陌生链接","帮人做担保","过度宠溺宠物","吃隔夜外卖",
+  "看恐怖片","挑战辣度MAX","盲目跟风炒股","地铁上外放","群发广告",
+  "给前任发消息","熬夜看球赛","酒后乱说话","借钱给不熟的人","退掉有用的保险",
+  "作死熬夜","躺着不动","刷剧到天亮","用光所有运气","删光所有聊天记录"
+];
+
+// 幸运方位
+var DIRECTIONS = ['东','南','西','北','东南','东北','西南','西北'];
+
+// 等级权重累积数组
+var WEIGHT_CUMULATIVE = [];
+(function() {
+  var sum = 0;
+  for (var i = 0; i < LEVEL_WEIGHTS.length; i++) {
+    sum += LEVEL_WEIGHTS[i].weight;
+    WEIGHT_CUMULATIVE.push(sum);
+  }
+})();
+
+// ============================================================
+// D: 锁定/抽签引擎
+// ============================================================
+function getTodayKey() {
+  var d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
+function storageKey(type) {
+  return 'lottery_' + type + '_' + getTodayKey();
+}
+
+function isLocked(type) {
+  return localStorage.getItem(storageKey(type)) !== null;
+}
+
+function getCachedResult(type) {
+  var raw = localStorage.getItem(storageKey(type));
+  if (!raw) return null;
+  try { return JSON.parse(raw); }
+  catch(e) { return null; }
+}
+
+function weightedLevel(rng) {
+  var roll = rng() * 100;
+  for (var i = 0; i < WEIGHT_CUMULATIVE.length; i++) {
+    if (roll < WEIGHT_CUMULATIVE[i]) return LEVEL_WEIGHTS[i];
+  }
+  return LEVEL_WEIGHTS[LEVEL_WEIGHTS.length - 1];
+}
+
+function generateResult(type) {
+  var todayKey = getTodayKey();
+
+  // 随机签：先确定子类型
+  var effectiveType = type;
+  if (type === 'random') {
+    var subSeed = hashStr(todayKey + '_' + type + '_sub_v1');
+    var subRng = createRNG(subSeed);
+    effectiveType = LOTTERY_TYPES[Math.floor(subRng() * LOTTERY_TYPES.length)];
+  }
+
+  // 种子
+  var seed = hashStr(todayKey + '_' + effectiveType + '_v1');
+  var rng = createRNG(seed);
+
+  // 获取对应数据库
+  var dbMap = {
+    wealth: FORTUNE_WEALTH, love: FORTUNE_LOVE, study: FORTUNE_STUDY,
+    career: FORTUNE_CAREER, general: FORTUNE_GENERAL, random: FORTUNE_GENERAL
+  };
+  var db = dbMap[effectiveType] || FORTUNE_GENERAL;
+
+  // 隐藏签检测
+  var hiddenRoll = rng();
+  var isHidden = hiddenRoll < 0.0005;
+
+  var result;
+  if (isHidden) {
+    result = {
+      type: type,
+      effectiveType: effectiveType,
+      level: '？？？',
+      levelColor: '#00ff00',
+      levelEmoji: '👽',
+      text: HIDDEN_SIGNS[type] || HIDDEN_SIGNS['random'],
+      do: ['保持怀疑','检查系统日志'],
+      dont: ['相信一切','关闭防火墙'],
+      luckyColor: '#00ff00',
+      luckyColorName: '骇客绿',
+      luckyNumber: (Math.floor(rng() * 99) + 1),
+      luckyNumberComment: 'Error 404: Meaning Not Found',
+      luckyDirection: '第四维度',
+      isHidden: true,
+      date: todayKey,
+      timestamp: Date.now()
+    };
+  } else {
+    // 等级
+    var levelInfo = weightedLevel(rng);
+    // 签文
+    var entries = db[levelInfo.level];
+    var entryIdx = Math.floor(rng() * entries.length);
+    var text = entries[entryIdx];
+
+    // 幸运属性
+    var hue = Math.floor(rng() * 360);
+    var luckyColor = hslToHex(hue, 65 + (seed % 20), 50 + (Math.floor(rng() * 15)));
+    var luckyColorName = getColorName(hue);
+    var luckyNumber = Math.floor(rng() * 99) + 1;
+    var luckyNumberComment = getNumComment(luckyNumber);
+    var luckyDirection = DIRECTIONS[Math.floor(rng() * DIRECTIONS.length)];
+
+    // 宜忌
+    var shuffledDo = shuffle(DO_ACTIONS, seed + 333);
+    var shuffledDont = shuffle(DONT_ACTIONS, seed + 777);
+    var doItems = [shuffledDo[Math.floor(rng() * shuffledDo.length)], shuffledDo[(Math.floor(rng() * shuffledDo.length) + 7) % shuffledDo.length]];
+    var dontItems = [shuffledDont[Math.floor(rng() * shuffledDont.length)], shuffledDont[(Math.floor(rng() * shuffledDont.length) + 5) % shuffledDont.length]];
+    // 避免宜忌重叠
+    if (dontItems[0] === doItems[0]) dontItems[0] = shuffledDont[(Math.floor(rng() * shuffledDont.length) + 13) % shuffledDont.length];
+    if (dontItems[1] === doItems[1]) dontItems[1] = shuffledDont[(Math.floor(rng() * shuffledDont.length) + 17) % shuffledDont.length];
+
+    result = {
+      type: type,
+      effectiveType: effectiveType,
+      level: levelInfo.level,
+      levelColor: levelInfo.color,
+      levelEmoji: levelInfo.emoji,
+      text: text,
+      do: doItems,
+      dont: dontItems,
+      luckyColor: luckyColor,
+      luckyColorName: luckyColorName,
+      luckyNumber: luckyNumber,
+      luckyNumberComment: luckyNumberComment,
+      luckyDirection: luckyDirection,
+      isHidden: false,
+      date: todayKey,
+      timestamp: Date.now()
+    };
+  }
+
+  return result;
+}
+
+function saveResult(type, result) {
+  localStorage.setItem(storageKey(type), JSON.stringify(result));
+  // 更新聚合计数
+  var todayKey = getTodayKey();
+  var count = 0;
+  for (var i = 0; i < LOTTERY_TYPES.length; i++) {
+    if (localStorage.getItem('lottery_' + LOTTERY_TYPES[i] + '_' + todayKey)) count++;
+  }
+  if (localStorage.getItem('lottery_random_' + todayKey)) count++;
+  localStorage.setItem('lottery_redraw_' + todayKey, String(count));
+  Lottery.state.redrawCount = count;
+}
+
+// ============================================================
+// E: UI / 动画
+// ============================================================
+function updateCounter() {
+  var todayKey = getTodayKey();
+  var count = 0;
+  var allTypes = LOTTERY_TYPES.concat(['random']);
+  for (var i = 0; i < allTypes.length; i++) {
+    if (localStorage.getItem('lottery_' + allTypes[i] + '_' + todayKey)) count++;
+  }
+  // 也用聚合值做校验
+  var aggVal = parseInt(localStorage.getItem('lottery_redraw_' + todayKey)) || 0;
+  if (aggVal > count) count = aggVal;
+  Lottery.state.redrawCount = count;
+  document.getElementById('counter').textContent = '今日已抽 ' + count + '/6';
+
+  // 更新卡片锁定状态
+  for (var j = 0; j < allTypes.length; j++) {
+    var card = document.querySelector('.card[data-type="' + allTypes[j] + '"]');
+    if (!card) continue;
+    if (localStorage.getItem('lottery_' + allTypes[j] + '_' + todayKey)) {
+      card.classList.add('locked');
+      card.classList.add('done');
+    } else {
+      card.classList.remove('locked');
+      card.classList.remove('done');
+    }
+  }
+
+  // 日期显示
+  var d = new Date();
+  document.getElementById('dateDisplay').textContent =
+    d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0');
+}
+
+// 打字机效果
+function typewriterEffect(el, text, speed, callback) {
+  el.textContent = '';
+  var i = 0;
+  // 对于隐藏签，使用glitch模式
+  var isHiddenText = text.indexOf('⚠') >= 0;
+  var baseSpeed = isHiddenText ? (speed || 60) : (speed || 40);
+
+  function type() {
+    if (i < text.length) {
+      // glitch: 偶尔一次跳3个字符
+      var chunk = 1;
+      if (isHiddenText && Math.random() < 0.15) chunk = 3;
+      i += chunk;
+      if (i > text.length) i = text.length;
+      el.textContent = text.substring(0, i);
+      // 随机变速
+      var nextSpeed = baseSpeed + (Math.random() - 0.5) * baseSpeed;
+      setTimeout(type, nextSpeed);
+    } else {
+      if (callback) callback();
+    }
+  }
+  type();
+}
+
+var TYPE_NAMES = {
+  wealth: '💰 财运签', love: '🌸 桃花签', study: '📚 学业签',
+  career: '💼 事业签', general: '🎰 综合签', random: '🌌 随机签'
+};
+
+function openModal(result, isRevisit) {
+  Lottery.state.lastResult = result;
+  var modal = document.getElementById('modal');
+  var overlay = document.getElementById('modalOverlay');
+
+  // 等级级别 class
+  modal.className = 'modal level-' + result.level;
+
+  // 等级显示
+  document.getElementById('modalLevel').textContent = result.levelEmoji + ' ' + result.level;
+  document.getElementById('modalLevel').style.color = result.levelColor;
+
+  // 签种
+  var typeLabel = TYPE_NAMES[result.type] || result.type;
+  if (result.type === 'random' && result.effectiveType && result.effectiveType !== 'random') {
+    typeLabel = '🌌 随机签 → ' + TYPE_NAMES[result.effectiveType];
+  }
+  document.getElementById('modalType').textContent = typeLabel;
+
+  // 签文
+  var textEl = document.getElementById('modalText');
+  document.getElementById('modalLucky').innerHTML = '';
+  document.getElementById('modalAdvice').innerHTML = '';
+  document.getElementById('modalPosterBtn').style.display = 'inline-block';
+
+  // 幸运信息
+  var luckyHTML = '';
+  if (result.isHidden) {
+    luckyHTML += '<div class="modal-lucky-item"><div class="lucky-label">🟢 幸运色</div><div class="lucky-val"><span class="swatch" style="background:#00ff00;box-shadow:0 0 6px #00ff00;"></span>骇客绿</div></div>';
+    luckyHTML += '<div class="modal-lucky-item"><div class="lucky-label">🔢 幸运数字</div><div class="lucky-val">' + result.luckyNumber + ' <span style="font-size:10px;color:#706090;">Error 404</span></div></div>';
+  } else {
+    luckyHTML += '<div class="modal-lucky-item"><div class="lucky-label">🎨 幸运色</div><div class="lucky-val"><span class="swatch" style="background:' + result.luckyColor + ';box-shadow:0 0 8px ' + result.luckyColor + ';"></span>' + result.luckyColorName + '</div></div>';
+    luckyHTML += '<div class="modal-lucky-item"><div class="lucky-label">🔢 幸运数字</div><div class="lucky-val">' + result.luckyNumber + ' <span style="font-size:10px;color:#706090;">' + result.luckyNumberComment + '</span></div></div>';
+    luckyHTML += '<div class="modal-lucky-item"><div class="lucky-label">🧭 幸运方位</div><div class="lucky-val">' + result.luckyDirection + '</div></div>';
+  }
+  document.getElementById('modalLucky').innerHTML = luckyHTML;
+
+  // 宜忌
+  var adviceHTML = '';
+  adviceHTML += '<div class="modal-do"><strong>✅ 宜：</strong>' + result.do.map(escapeHtml).join('、') + '</div>';
+  adviceHTML += '<div class="modal-dont"><strong>❌ 忌：</strong>' + result.dont.map(escapeHtml).join('、') + '</div>';
+  document.getElementById('modalAdvice').innerHTML = adviceHTML;
+
+  // 显示弹窗
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  // 打字机效果（仅首次展示）
+  textEl.innerHTML = '';
+  if (!isRevisit) {
+    typewriterEffect(textEl, result.text, result.isHidden ? 50 : 30, function() {
+      // 打字完成
+    });
+  } else {
+    textEl.textContent = result.text;
+  }
+
+  // 更新计数器
+  updateCounter();
+}
+
+function closeModal() {
+  var overlay = document.getElementById('modalOverlay');
+  overlay.classList.remove('active');
+  document.body.style.overflow = '';
+  Lottery.state.lastResult = null;
+  // 清理打字机残留文本
+  document.getElementById('modalText').textContent = '';
+}
+
+function showHiddenSign(result) {
+  Lottery.state.lastResult = result;
+  var overlay = document.getElementById('hiddenOverlay');
+  var canvas = document.getElementById('hiddenSignCanvas');
+  var ctx = canvas.getContext('2d');
+  var textEl = document.getElementById('hiddenText');
+  var closeBtn = document.getElementById('hiddenCloseBtn');
+
+  // 设置 canvas 尺寸
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  // 粒子
+  var particles = [];
+  for (var i = 0; i < 100; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 1.5,
+      vy: (Math.random() - 0.5) * 1.5,
+      size: Math.random() * 3 + 1,
+      alpha: Math.random() * 0.8 + 0.2,
+      life: Math.random() * 200 + 50,
+      color: Math.random() < 0.3 ? '#00ff00' : '#ffffff'
+    });
+  }
+
+  var animId;
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+      if (p.life <= 0) {
+        p.x = Math.random() * canvas.width;
+        p.y = Math.random() * canvas.height;
+        p.life = Math.random() * 200 + 50;
+      }
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha * Math.min(1, p.life / 200);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (overlay.classList.contains('active')) {
+      animId = requestAnimationFrame(animateParticles);
+    }
+  }
+
+  // 显示覆盖层
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  closeBtn.classList.remove('show');
+  textEl.textContent = '';
+
+  animateParticles();
+
+  // 延迟后开始打字
+  setTimeout(function() {
+    typewriterEffect(textEl, result.text, 50, function() {
+      // 显示关闭按钮
+      setTimeout(function() {
+        closeBtn.classList.add('show');
+      }, 500);
+    });
+  }, 600);
+
+  // 关闭按钮
+  closeBtn.onclick = function() {
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+    if (animId) cancelAnimationFrame(animId);
+    textEl.textContent = '';
+    updateCounter();
+  };
+
+  // 更新计数器
+  updateCounter();
+}
+
+// 卡片点击处理
+function handleCardClick(type) {
+  if (Lottery.state.isAnimating) return;
+
+  var card = document.querySelector('.card[data-type="' + type + '"]');
+  if (!card) return;
+
+  // 已锁定：显示缓存
+  if (isLocked(type)) {
+    showToast('☯ 今日卦象已定 · 宜静不宜动');
+    var cached = getCachedResult(type);
+    if (cached) {
+      if (cached.isHidden) {
+        // 回看隐藏签用弹窗，不用全屏特效
+        openModal(cached, true);
+      } else {
+        openModal(cached, true);
+      }
+    }
+    return;
+  }
+
+  // 生成结果
+  Lottery.state.isAnimating = true;
+
+  // 摇晃动画
+  card.classList.add('shaking');
+
+  // 图标飞出
+  var iconEl = card.querySelector('.card-icon');
+  if (iconEl && !reducedMotion) {
+    setTimeout(function() {
+      iconEl.classList.add('flyOut');
+    }, 150);
+  }
+
+  // 动画结束后展示结果
+  var animDuration = reducedMotion ? 100 : 600;
+  setTimeout(function() {
+    card.classList.remove('shaking');
+    if (iconEl) iconEl.classList.remove('flyOut');
+
+    var result = generateResult(type);
+    saveResult(type, result);
+
+    if (result.isHidden) {
+      showHiddenSign(result);
+    } else {
+      openModal(result, false);
+    }
+
+    Lottery.state.isAnimating = false;
+  }, animDuration);
+}
+
+// ============================================================
+// F: 海报生成
+// ============================================================
+function generatePoster() {
+  var result = Lottery.state.lastResult;
+  if (!result) {
+    showToast('请先抽取一支签');
+    return;
+  }
+
+  if (typeof html2canvas === 'undefined') {
+    showToast('海报组件加载中，请稍后再试');
+    return;
+  }
+
+  var btn = document.getElementById('modalPosterBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中...';
+
+  var posterWrap = document.getElementById('posterWrap');
+  var poster = document.getElementById('poster');
+
+  // 构建海报 HTML
+  var starsHTML = '';
+  for (var i = 0; i < 50; i++) {
+    var sx = Math.random() * 100;
+    var sy = Math.random() * 100;
+    var sd = (Math.random() * 2 + 1).toFixed(1);
+    var sdelay = (Math.random() * 2).toFixed(1);
+    starsHTML += '<div class="poster-star" style="left:' + sx + '%;top:' + sy + '%;animation-duration:' + sd + 's;animation-delay:' + sdelay + 's;"></div>';
+  }
+
+  var typeLabel = TYPE_NAMES[result.type] || result.type;
+  if (result.type === 'random' && result.effectiveType && result.effectiveType !== 'random') {
+    typeLabel = '🌌 随机 → ' + TYPE_NAMES[result.effectiveType];
+  }
+
+  // 水印旋转
+  var watermarkStyle = 'font-size:26px;color:rgba(255,255,255,0.03);position:absolute;bottom:100px;left:50%;transform:translateX(-50%) rotate(-15deg);letter-spacing:8px;font-weight:900;pointer-events:none;white-space:nowrap;';
+
+  var posterHTML =
+    '<div class="poster-stars">' + starsHTML + '</div>' +
+    '<div class="poster-border"></div>' +
+    '<div class="poster-corner pc-tl"></div>' +
+    '<div class="poster-corner pc-tr"></div>' +
+    '<div class="poster-corner pc-bl"></div>' +
+    '<div class="poster-corner pc-br"></div>' +
+    '<div style="' + watermarkStyle + '">玄不救非</div>' +
+    '<div class="poster-inner">' +
+      '<div class="poster-header">' +
+        '<div class="ph-icon">🏮</div>' +
+        '<div class="ph-title">玄不救非 · 赛博抽签</div>' +
+        '<div class="ph-divider"></div>' +
+      '</div>' +
+      '<div class="poster-meta">' +
+        '<div>📅 抽签日期：' + result.date.replace(/-/g, '.') + '</div>' +
+        '<div>🏷 签种：' + typeLabel.replace(/[^一-龥]/g,'').replace(/财运签|桃花签|学业签|事业签|综合签|随机签/g, function(m){return m;}) + '</div>' +
+      '</div>' +
+      '<div class="poster-level" style="color:' + result.levelColor + '">' +
+        result.levelEmoji + ' ' + result.level +
+      '</div>' +
+      '<div class="poster-level-sub">' + (result.isHidden ? '【隐藏签】' : '签文') + '</div>' +
+      '<div class="poster-fortune-text">' + escapeHtml(result.text).replace(/\n/g, '<br>') + '</div>' +
+      '<div class="poster-lucky-row">' +
+        '<div class="poster-lucky-item">' +
+          '<div class="pl-label">🎨 幸运色</div>' +
+          '<div class="pl-val"><span class="pl-swatch" style="background:' + result.luckyColor + ';box-shadow:0 0 6px ' + result.luckyColor + ';"></span>' + result.luckyColorName + '</div>' +
+        '</div>' +
+        '<div class="poster-lucky-item">' +
+          '<div class="pl-label">🔢 幸运数字</div>' +
+          '<div class="pl-val">' + result.luckyNumber + ' <span style="font-size:10px;color:#706090;">' + result.luckyNumberComment + '</span></div>' +
+        '</div>' +
+        '<div class="poster-lucky-item">' +
+          '<div class="pl-label">🧭 幸运方位</div>' +
+          '<div class="pl-val">' + result.luckyDirection + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="poster-advice">' +
+        '<div class="poster-do"><strong>✅ 宜：</strong>' + result.do.map(escapeHtml).join('、') + '</div>' +
+        '<div class="poster-dont"><strong>❌ 忌：</strong>' + result.dont.map(escapeHtml).join('、') + '</div>' +
+      '</div>' +
+      '<div class="poster-footer">' +
+        '<div class="pf-brand">🏮 玄不救非 · 赛博抽签</div>' +
+        '<div class="poster-qr">' +
+          '<div style="width:60px;height:60px;border:1px dashed rgba(255,255,255,0.15);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:rgba(255,255,255,0.2);">QR</div>' +
+          '<div style="font-size:9px;color:rgba(255,255,255,0.15);margin-top:4px;">扫码体验赛博抽签</div>' +
+        '</div>' +
+        '<div style="margin-top:6px;">☯ 仅供娱乐 · 切勿当真 ☯</div>' +
+      '</div>' +
+    '</div>';
+
+  poster.innerHTML = posterHTML;
+
+  // 渲染
+  posterWrap.style.left = '0';
+  posterWrap.style.top = '0';
+
+  setTimeout(function() {
+    html2canvas(poster, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true,
+      allowTaint: true
+    }).then(function(canvas) {
+      posterWrap.style.left = '-9999px';
+      posterWrap.style.top = '0';
+
+      var link = document.createElement('a');
+      link.download = '赛博抽签_' + (result.type) + '_' + result.date + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      btn.disabled = false;
+      btn.textContent = '📸 生成海报';
+      showToast('✅ 海报已生成，请查看下载');
+    }).catch(function(err) {
+      posterWrap.style.left = '-9999px';
+      btn.disabled = false;
+      btn.textContent = '📸 生成海报';
+      console.error('海报生成失败:', err);
+      showToast('海报生成失败，请重试');
+    });
+  }, 300);
+}
+
+// ============================================================
+// G: Canvas 背景 (从 index.html 复制)
+// ============================================================
+// 网格背景
+(function() {
+  var c = document.getElementById('gridCanvas');
+  var ctx = c.getContext('2d');
+  var w, h;
+
+  function resize() {
+    w = c.width = window.innerWidth;
+    h = c.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function drawGrid() {
+    ctx.clearRect(0, 0, w, h);
+
+    var horizonY = h * 0.58;
+    var vanishX = w * 0.5;
+    var cellCount = 24;
+    var maxDepth = 70;
+    var baseAlpha = reducedMotion ? 0.08 : 0.18;
+
+    for (var depth = 1; depth <= maxDepth; depth++) {
+      var t = depth / maxDepth;
+      var ty = horizonY + (h - horizonY) * Math.pow(t, 1.6);
+      if (ty > h + 2) break;
+
+      var alpha = baseAlpha * (1 - t) * 0.9;
+      var lineW = 0.5 + (1 - t) * 1.0;
+
+      ctx.beginPath();
+      ctx.moveTo(0, ty);
+      ctx.lineTo(w, ty);
+      ctx.strokeStyle = 'rgba(157,78,221,' + alpha + ')';
+      ctx.lineWidth = lineW;
+      ctx.stroke();
+    }
+
+    for (var i = -cellCount; i <= cellCount; i++) {
+      var angle = (i / cellCount) * (Math.PI / 3);
+      var dx = Math.sin(angle);
+      var alpha = baseAlpha * 0.7;
+
+      ctx.beginPath();
+      ctx.moveTo(vanishX, horizonY);
+      var endX = vanishX + dx * (h - horizonY) * 3;
+      ctx.lineTo(endX, h);
+      ctx.strokeStyle = 'rgba(0,245,255,' + alpha + ')';
+      ctx.lineWidth = 0.4;
+      ctx.stroke();
+    }
+  }
+
+  function loop() {
+    drawGrid();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// 数字雨背景
+(function() {
+  var c = document.getElementById('rainCanvas');
+  var ctx = c.getContext('2d');
+  var w, h;
+  var drops = [];
+  var DROP_COUNT = 40;
+
+  function resize() {
+    w = c.width = window.innerWidth;
+    h = c.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  var chars = '01';
+  for (var i = 0; i < DROP_COUNT; i++) {
+    drops.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      speed: Math.random() * 0.6 + 0.2,
+      char: chars[Math.floor(Math.random() * chars.length)],
+      alpha: Math.random() * 0.15 + 0.05,
+      color: Math.random() < 0.6 ? '157,78,221' : '0,245,255'
+    });
+  }
+
+  function drawRain() {
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = '12px "Courier New", monospace';
+
+    if (reducedMotion) {
+      for (var i = 0; i < drops.length; i++) {
+        var d = drops[i];
+        ctx.fillStyle = 'rgba(' + d.color + ',' + (d.alpha * 0.5) + ')';
+        ctx.fillText(d.char, d.x, d.y);
+      }
+      return;
+    }
+
+    for (var i = 0; i < drops.length; i++) {
+      var d = drops[i];
+      ctx.fillStyle = 'rgba(' + d.color + ',' + d.alpha + ')';
+      ctx.fillText(d.char, d.x, d.y);
+      d.y += d.speed;
+      if (d.y > h + 20) {
+        d.y = -20;
+        d.x = Math.random() * w;
+      }
+    }
+  }
+
+  function loop() {
+    drawRain();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// ============================================================
+// H: 初始化
+// ============================================================
+(function() {
+  // 弹出关闭
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('modalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // 海报按钮
+  document.getElementById('modalPosterBtn').addEventListener('click', generatePoster);
+
+  // 隐藏签关闭（点击覆盖层背景）
+  document.getElementById('hiddenOverlay').addEventListener('click', function(e) {
+    if (e.target === this) {
+      document.getElementById('hiddenCloseBtn').click();
+    }
+  });
+
+  // ESC 关闭
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var hiddenOvl = document.getElementById('hiddenOverlay');
+      var modalOvl = document.getElementById('modalOverlay');
+      if (hiddenOvl.classList.contains('active')) {
+        document.getElementById('hiddenCloseBtn').click();
+      } else if (modalOvl.classList.contains('active')) {
+        closeModal();
+      }
+    }
+  });
+
+  // 卡片点击
+  var cards = document.querySelectorAll('.card');
+  for (var i = 0; i < cards.length; i++) {
+    (function(card) {
+      card.addEventListener('click', function() {
+        var type = card.getAttribute('data-type');
+        if (type) handleCardClick(type);
+      });
+    })(cards[i]);
+  }
+
+  // 初始化计数器
+  updateCounter();
+})();
+</script>
+
+</body>
+</html>
