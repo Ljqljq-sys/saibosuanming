@@ -16,7 +16,7 @@ if not exist .git (
 )
 
 :: 提交并推送
-git add index.html fortune.html
+git add index.html fortune.html lottery.html
 git commit -m "Update fortune page - %date% %time%"
 git push -u origin main
 
