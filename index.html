@@ -196,6 +196,10 @@
   .result-line:nth-child(4){animation-delay:0.4s;border-left-color:#55ddaa}
   .result-line:nth-child(5){animation-delay:0.5s;border-left-color:#00e5ff}
   .result-line:nth-child(6){animation-delay:0.6s;border-left-color:#ff5577}
+  .result-line:nth-child(7){animation-delay:0.7s;border-left-color:#ddaa55}
+  .result-line:nth-child(8){animation-delay:0.8s;border-left-color:#aaccff}
+  .result-line:nth-child(9){animation-delay:0.9s;border-left-color:#cc88ff}
+  .result-line:nth-child(10){animation-delay:1.0s;border-left-color:#88ddaa}
   @keyframes slideIn { to { opacity:1; transform:translateY(0); } }
   .error-msg { color:#ff5577; text-align:center; padding:14px; font-size:14px; }
 
@@ -609,6 +613,55 @@ function starsStr(n) {
   return s;
 }
 
+// HSL → Hex
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  var a = s * Math.min(l, 1 - l);
+  var f = function(n) {
+    var k = (n + h / 30) % 12;
+    var c = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * c).toString(16).padStart(2, '0');
+  };
+  return '#' + f(0) + f(8) + f(4);
+}
+
+// 色相 → 中文色名
+function getColorName(h) {
+  var names = {
+    0: '赛博红', 15: '赤橙', 30: '活力橙', 45: '琥珀金',
+    60: '月光金', 75: '柠檬黄', 90: '青柠绿', 120: '翡翠绿',
+    150: '碧波青', 180: '幻境青', 195: '天空蓝', 210: '赛博蓝',
+    240: '幽兰紫', 260: '星云紫', 275: '赛博紫', 290: '霓虹粉',
+    320: '蔷薇粉', 340: '玫瑰红', 355: '深绯红'
+  };
+  var closest = 0, minDist = 360;
+  for (var k in names) {
+    var dist = Math.min(Math.abs(h - parseInt(k)), 360 - Math.abs(h - parseInt(k)));
+    if (dist < minDist) { minDist = dist; closest = k; }
+  }
+  return names[closest] || '玄学色';
+}
+
+// 幸运数字趣味解读
+function getNumComment(n) {
+  var special = {
+    1: '一元初始', 7: '天选之数', 8: '发发发', 9: '九九归一',
+    13: '西方玄学之数', 14: '情人节余韵', 21: '黑杰克', 23: '乔丹之魂',
+    27: '3的三次方', 33: '双三之吉', 36: '天罡之数', 42: '宇宙终极答案',
+    49: '七的平方', 52: '扑克之魂', 55: '双五临门', 64: '八卦之平方',
+    66: '六六大顺', 69: '阴阳相合', 72: '地煞之数', 77: '双七拱照',
+    81: '九九八十一', 88: '双发临门', 96: '十二之八', 99: '极致之数'
+  };
+  if (special[n]) return special[n];
+  if (n % 10 === 0) return '十全十美';
+  if (n < 10) return '命中小吉数';
+  if (n < 30) return '平稳之数';
+  if (n < 50) return '中正平和';
+  if (n < 70) return '渐入佳境';
+  if (n < 90) return '大吉之兆';
+  return '登峰造极';
+}
+
 // ============================================================
 // 命理引擎
 // ============================================================
@@ -675,17 +728,34 @@ function generateFortune(name, birthday, mood) {
   var yunshiMod = (yunshiMods[mcat] || ["运势平稳。"])[moodSeed % 3];
   var yunshiLine = "🌟 今日综合运势：" + yunshiDesc + " " + stars + " " + yunshiMod;
 
+  // 幸运色
+  var hue = ((seed + moodSeed) % 360 + 360) % 360;
+  var colorHex = hslToHex(hue, 65 + (seed % 20), 50 + (moodSeed % 15));
+  var colorName = getColorName(hue);
+
+  // 幸运数字
+  var luckyNum = ((seed + moodSeed * 7) % 99) + 1;
+  var numComment = getNumComment(luckyNum);
+
   var lines = [
     yunshiLine,
     "💼 事业/学业运：" + pickText(STAR_CAREER[careerStar], seed + moodSeed, GENERAL_CAREER),
     "💕 桃花运：" + pickText(STAR_LOVE[loveStar], seed + moodSeed + 333, GENERAL_LOVE),
     "💰 财运：" + pickText(STAR_WEALTH[wealthStar], seed + moodSeed + 555, GENERAL_WEALTH),
+    "🎨 今日幸运色：" + colorHex + "（" + colorName + "）",
+    "🔢 幸运数字：" + luckyNum + "（" + numComment + "）",
     "✅ 宜：" + doItems.join("，"),
     "❌ 忌：" + dontItems.join("，"),
     "📿 " + moodLine
   ];
 
-  return lines.join("\n");
+  return {
+    text: lines.join("\n"),
+    colorHex: colorHex,
+    colorName: colorName,
+    luckyNum: luckyNum,
+    numComment: numComment
+  };
 }
 
 // ============================================================
@@ -789,8 +859,9 @@ form.addEventListener('submit', function(e) {
       submitBtn.disabled = false;
       result.className = 'result active';
 
+      var fortuneText = fortune.text;
       var html = '';
-      var lines = fortune.trim().split('\n');
+      var lines = fortuneText.trim().split('\n');
       lines.forEach(function(line) {
         var t = line.trim();
         if (t) html += '<div class="result-line">' + escapeHtml(t) + '</div>';
@@ -802,14 +873,22 @@ form.addEventListener('submit', function(e) {
       localStorage.setItem('fortune_date', today);
       var curCount = parseInt(localStorage.getItem('fortune_count')) || 0;
       localStorage.setItem('fortune_count', curCount + 1);
-      // 缓存最近一次结果，超过次数后可回看
+      // 缓存最近一次结果+幸运数据，超过次数后可回看
       localStorage.setItem('fortune_last_html', html);
       localStorage.setItem('fortune_last_name', name);
       localStorage.setItem('fortune_last_birthday', birthday);
       localStorage.setItem('fortune_last_mood', mood);
       localStorage.setItem('fortune_last_lines', JSON.stringify(lines));
+      localStorage.setItem('fortune_last_colorHex', fortune.colorHex);
+      localStorage.setItem('fortune_last_colorName', fortune.colorName);
+      localStorage.setItem('fortune_last_luckyNum', fortune.luckyNum);
+      localStorage.setItem('fortune_last_numComment', fortune.numComment);
       // 缓存海报数据
-      posterBtn._data = {name:name, birthday:birthday, mood:mood, lines:lines};
+      posterBtn._data = {
+        name:name, birthday:birthday, mood:mood, lines:lines,
+        colorHex: fortune.colorHex, colorName: fortune.colorName,
+        luckyNum: fortune.luckyNum, numComment: fortune.numComment
+      };
     } catch (err) {
       loading.classList.remove('active');
       submitBtn.disabled = false;
@@ -870,7 +949,11 @@ function showDailyLock() {
         name: localStorage.getItem('fortune_last_name') || '',
         birthday: localStorage.getItem('fortune_last_birthday') || '',
         mood: localStorage.getItem('fortune_last_mood') || '',
-        lines: JSON.parse(savedLines)
+        lines: JSON.parse(savedLines),
+        colorHex: localStorage.getItem('fortune_last_colorHex') || '',
+        colorName: localStorage.getItem('fortune_last_colorName') || '',
+        luckyNum: localStorage.getItem('fortune_last_luckyNum') || '',
+        numComment: localStorage.getItem('fortune_last_numComment') || ''
       };
       posterBtn.style.display = 'block';
     } catch(e) {}
@@ -935,6 +1018,22 @@ posterBtn.addEventListener('click', function() {
         '<div>🎂 '+escapeHtml(data.birthday)+' · 属'+animal+'</div>'+
         '<div>📅 占卜日期：'+dateStr+'</div>'+
       '</div>'+
+      // 幸运色 + 幸运数字
+      (data.colorHex ? '<div style="text-align:center;margin:10px 0 14px;display:flex;justify-content:center;gap:14px;">'+
+        '<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:8px 14px;text-align:center;">'+
+          '<div style="font-size:11px;color:#a090c0;margin-bottom:3px;">🎨 今日幸运色</div>'+
+          '<div style="display:flex;align-items:center;gap:8px;">'+
+            '<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:'+escapeHtml(data.colorHex)+';box-shadow:0 0 10px '+escapeHtml(data.colorHex)+';"></span>'+
+            '<span style="font-size:14px;color:#f0c040;font-weight:600;">'+escapeHtml(data.colorHex)+'</span>'+
+          '</div>'+
+          '<div style="font-size:11px;color:#a090c0;">'+escapeHtml(data.colorName)+'</div>'+
+        '</div>'+
+        '<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:8px 14px;text-align:center;">'+
+          '<div style="font-size:11px;color:#a090c0;margin-bottom:3px;">🔢 幸运数字</div>'+
+          '<div style="font-size:28px;color:#f0c040;font-weight:700;line-height:1.2;">'+data.luckyNum+'</div>'+
+          '<div style="font-size:11px;color:#a090c0;">'+escapeHtml(data.numComment||'')+'</div>'+
+        '</div>'+
+      '</div>' : '')+
       '<div class="poster-fortune">'+fortuneHtml+'</div>'+
       '<div class="poster-footer">'+
         '<div class="pf-brand">🔮 赛博玄学，仅供娱乐</div>'+
