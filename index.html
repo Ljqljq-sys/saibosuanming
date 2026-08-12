@@ -47,7 +47,7 @@
   /* ===== 主容器 ===== */
   .main {
     position:relative; z-index:3; text-align:center; padding:20px;
-    width:100%; max-width:700px;
+    width:100%; max-width:960px;
   }
 
   .title {
@@ -85,8 +85,9 @@
     backdrop-filter:blur(6px);
     -webkit-backdrop-filter:blur(6px);
   }
-  .card-left  { animation-delay:0.1s; }
-  .card-right { animation-delay:0.3s; }
+  .card-left   { animation-delay:0.1s; }
+  .card-center { animation-delay:0.2s; }
+  .card-right  { animation-delay:0.3s; }
   @keyframes fadeInUp {
     to { opacity:1; transform:translateY(0); }
   }
@@ -125,12 +126,93 @@
   }
   .card:hover .card-desc { color:#b090d0; }
 
-  .card-left:hover  { border-color:rgba(157,78,221,0.7); }
-  .card-right:hover { border-color:rgba(0,245,255,0.5); box-shadow:0 0 30px rgba(0,245,255,0.25),0 0 60px rgba(0,245,255,0.1),0 10px 40px rgba(0,0,0,0.5); }
+  .card-left:hover   { border-color:rgba(157,78,221,0.7); }
+  .card-center:hover { border-color:rgba(240,192,64,0.6); box-shadow:0 0 30px rgba(240,192,64,0.3),0 0 60px rgba(240,192,64,0.1),0 10px 40px rgba(0,0,0,0.5); }
+  .card-center:hover .card-label { text-shadow:0 0 12px rgba(240,192,64,0.6); }
+  .card-center:hover .card-desc { color:#d0b860; }
+  .card-right:hover  { border-color:rgba(0,245,255,0.5); box-shadow:0 0 30px rgba(0,245,255,0.25),0 0 60px rgba(0,245,255,0.1),0 10px 40px rgba(0,0,0,0.5); }
 
   .footer {
     margin-top:36px; font-size:11px; color:rgba(120,100,150,0.4);
     letter-spacing:1px;
+  }
+
+  /* ===== 功德弹窗 (merit-) ===== */
+  .merit-overlay {
+    position:fixed; inset:0; z-index:60; background:rgba(0,0,0,0.78);
+    backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition:opacity 0.3s;
+  }
+  .merit-overlay.active { opacity:1; pointer-events:auto; }
+
+  .merit-modal {
+    background:var(--card-bg);
+    border:1px solid rgba(240,192,64,0.35);
+    border-radius:20px; padding:36px 28px 28px;
+    max-width:380px; width:90%; position:relative; text-align:center;
+    transform:translateY(30px);
+    transition:transform 0.35s cubic-bezier(.34,1.56,.64,1);
+    box-shadow:0 0 40px rgba(240,192,64,0.12);
+  }
+  .merit-overlay.active .merit-modal { transform:translateY(0); }
+
+  .merit-close {
+    position:absolute; top:12px; right:14px;
+    background:transparent; border:1px solid rgba(200,180,220,0.3);
+    color:rgba(200,180,220,0.6); font-size:16px; width:30px; height:30px;
+    border-radius:50%; cursor:pointer; transition:all 0.3s;
+    display:flex; align-items:center; justify-content:center; line-height:1;
+  }
+  .merit-close:hover { color:#fff; border-color:rgba(240,192,64,0.5); box-shadow:0 0 8px rgba(240,192,64,0.3); }
+
+  .merit-icon {
+    font-size:72px; display:block; margin-bottom:12px;
+    transition:transform 0.5s;
+  }
+  .merit-icon:hover { transform:scale(1.12); filter:drop-shadow(0 0 16px rgba(240,192,64,0.5)); }
+
+  .merit-counter {
+    font-family:'Orbitron','Microsoft YaHei',sans-serif;
+    font-size:52px; font-weight:900; letter-spacing:3px;
+    color:#ffd700;
+    text-shadow:0 0 10px rgba(255,215,0,0.5),0 0 30px rgba(255,180,0,0.3);
+    margin-bottom:16px; line-height:1;
+  }
+
+  .merit-btn {
+    font-family:'Microsoft YaHei','PingFang SC',sans-serif;
+    font-size:18px; color:#ffd700; background:rgba(240,192,64,0.08);
+    border:1px solid rgba(240,192,64,0.4); border-radius:30px;
+    padding:12px 40px; cursor:pointer; letter-spacing:2px;
+    transition:all 0.3s;
+  }
+  .merit-btn:hover { background:rgba(240,192,64,0.18); box-shadow:0 0 20px rgba(240,192,64,0.3); }
+  .merit-btn:active { transform:scale(0.95); }
+  .merit-btn.merit-max {
+    color:rgba(180,160,120,0.5); border-color:rgba(180,160,120,0.2);
+    background:rgba(180,160,120,0.05); cursor:not-allowed; pointer-events:none;
+  }
+
+  .merit-status {
+    margin-top:14px; font-size:13px; color:#b89040;
+    text-shadow:0 0 4px rgba(200,160,60,0.3);
+    letter-spacing:1px;
+  }
+
+  /* +1 飘散粒子 */
+  @keyframes meritFloat {
+    0%   { opacity:1; transform:translateY(0) scale(0.6); }
+    30%  { opacity:1; transform:translateY(-30px) scale(1.3); }
+    100% { opacity:0; transform:translateY(-100px) scale(0.5); }
+  }
+  .merit-particle {
+    position:fixed; pointer-events:none; z-index:70;
+    font-family:'Orbitron',sans-serif; font-size:22px; font-weight:900;
+    color:#ffd700;
+    text-shadow:0 0 8px rgba(255,215,0,0.7),0 0 20px rgba(255,180,0,0.4);
+    animation:meritFloat 1.2s ease-out forwards;
   }
 
   /* Toast */
@@ -151,13 +233,24 @@
     .glow-orb { animation:none; opacity:0.5; }
     .title { animation:none; }
     .card { animation:none; opacity:1; transform:none; }
+    .merit-modal { transition:none; }
+    .merit-overlay { transition:none; }
+    .merit-particle { animation:none; opacity:0; }
     #gridCanvas, #rainCanvas { opacity:0.3; }
+  }
+  @media (max-width:780px) {
+    .cards { gap:14px; }
+    .card { padding:24px 12px 20px; }
   }
   @media (max-width:560px) {
     .cards { flex-direction:column; align-items:center; gap:16px; }
     .card { max-width:320px; width:100%; padding:28px 20px 22px; }
     .card:hover { transform:translateY(-6px); }
     .card:active { transform:scale(0.97) translateY(-3px); }
+    .merit-modal { padding:28px 18px 22px; }
+    .merit-icon { font-size:56px; }
+    .merit-counter { font-size:40px; }
+    .merit-btn { font-size:16px; padding:10px 32px; }
     #gridCanvas, #rainCanvas { opacity:0.5; }
   }
 </style>
@@ -179,6 +272,11 @@
       <div class="card-label">赛 博 算 命</div>
       <div class="card-desc">AI 紫微斗数 · 即时起卦</div>
     </a>
+    <a class="card card-center" href="javascript:void(0)" id="meritCard">
+      <span class="card-icon">🪷</span>
+      <div class="card-label">赛 博 功 德</div>
+      <div class="card-desc">电子木鱼 · 积攒功德</div>
+    </a>
     <a class="card card-right" href="lottery.html">
       <span class="card-icon">🏮</span>
       <div class="card-label">抽　　　签</div>
@@ -187,6 +285,17 @@
   </div>
 
   <p class="footer">仅供娱乐，切勿当真 · 数据存储在本地</p>
+</div>
+
+<!-- 功德弹窗 -->
+<div class="merit-overlay" id="meritOverlay">
+  <div class="merit-modal">
+    <button class="merit-close" id="meritCloseBtn">✕</button>
+    <div class="merit-icon">🪷</div>
+    <div class="merit-counter" id="meritCounter">0</div>
+    <button class="merit-btn" id="meritBtn">🙏 积攒功德</button>
+    <div class="merit-status" id="meritStatus">积攒功德</div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -335,6 +444,94 @@ var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matche
     requestAnimationFrame(loop);
   }
   loop();
+})();
+
+// ============================================================
+// 赛博功德 - 电子木鱼 (完全独立，不影响算命/抽签)
+// ============================================================
+(function() {
+  var meritCount = parseInt(localStorage.getItem('cyber_merit')) || 0;
+  var meritMax = 100;
+
+  var meritOverlay = document.getElementById('meritOverlay');
+  var meritCounterEl = document.getElementById('meritCounter');
+  var meritStatusEl = document.getElementById('meritStatus');
+  var meritBtn = document.getElementById('meritBtn');
+
+  function meritGetText(count) {
+    if (count >= 100) return '功德圆满 🪷';
+    if (count >= 99) return '只差一哆嗦 💨';
+    if (count >= 50) return '功德过半 📿';
+    return '积攒功德 🙏';
+  }
+
+  function meritSave() {
+    try { localStorage.setItem('cyber_merit', String(meritCount)); } catch(e) {}
+  }
+
+  function meritSpawnParticle(x, y) {
+    var el = document.createElement('span');
+    el.className = 'merit-particle';
+    el.textContent = '+1';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    document.body.appendChild(el);
+    el.addEventListener('animationend', function() { el.remove(); });
+  }
+
+  function meritKnock(e) {
+    if (meritCount >= meritMax) return;
+    meritCount++;
+    meritCounterEl.textContent = meritCount;
+    meritStatusEl.textContent = meritGetText(meritCount);
+    meritSave();
+    meritSpawnParticle(e.clientX, e.clientY);
+    if (meritCount >= meritMax) {
+      meritBtn.classList.add('merit-max');
+      meritBtn.textContent = '✨ 功德圆满 ✨';
+    }
+  }
+
+  function meritOpen() {
+    meritCounterEl.textContent = meritCount;
+    meritStatusEl.textContent = meritGetText(meritCount);
+    if (meritCount >= meritMax) {
+      meritBtn.classList.add('merit-max');
+      meritBtn.textContent = '✨ 功德圆满 ✨';
+    } else {
+      meritBtn.classList.remove('merit-max');
+      meritBtn.textContent = '🙏 积攒功德';
+    }
+    meritOverlay.classList.add('active');
+  }
+
+  function meritClose() {
+    meritOverlay.classList.remove('active');
+  }
+
+  // 初始化
+  meritCounterEl.textContent = meritCount;
+  meritStatusEl.textContent = meritGetText(meritCount);
+  if (meritCount >= meritMax) {
+    meritBtn.classList.add('merit-max');
+    meritBtn.textContent = '✨ 功德圆满 ✨';
+  }
+
+  // 事件
+  document.getElementById('meritCard').addEventListener('click', function(e) {
+    e.preventDefault();
+    meritOpen();
+  });
+  meritBtn.addEventListener('click', meritKnock);
+  document.getElementById('meritCloseBtn').addEventListener('click', meritClose);
+  meritOverlay.addEventListener('click', function(e) {
+    if (e.target === this) meritClose();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && meritOverlay.classList.contains('active')) {
+      meritClose();
+    }
+  });
 })();
 
 </script>
