@@ -431,6 +431,115 @@
   .btn-poster:active { transform:scale(0.95); }
   .btn-poster:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
 
+  /* ===== 机枢履历 (resume-) ===== */
+  .resume-wrap {
+    margin-top:18px; margin-bottom:4px;
+    background:rgba(10,5,25,0.7);
+    border:1px solid rgba(0,245,255,0.25);
+    border-radius:12px;
+    box-shadow:0 0 16px rgba(0,245,255,0.06),inset 0 0 30px rgba(0,245,255,0.02);
+    overflow:hidden;
+    position:relative;
+  }
+  /* 扫描线 */
+  .resume-wrap::before {
+    content:''; position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:repeating-linear-gradient(
+      0deg, transparent, transparent 3px, rgba(0,245,255,0.015) 3px, rgba(0,245,255,0.015) 4px
+    );
+    animation:resumeScan 4s linear infinite;
+  }
+  @keyframes resumeScan {
+    0%   { transform:translateY(0); }
+    100% { transform:translateY(8px); }
+  }
+
+  .resume-toggle { display:none; }
+
+  .resume-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; cursor:pointer; user-select:none;
+    border-bottom:1px solid rgba(0,245,255,0.08);
+    transition:border-color 0.3s;
+    position:relative; z-index:2;
+  }
+  .resume-header:hover {
+    border-color:rgba(0,245,255,0.35);
+    box-shadow:0 0 12px rgba(0,245,255,0.08);
+  }
+
+  .resume-title {
+    font-family:'Orbitron','Microsoft YaHei',sans-serif;
+    font-size:12px; font-weight:700; letter-spacing:2px;
+    color:#00f5ff;
+    text-shadow:0 0 6px rgba(0,245,255,0.3);
+  }
+
+  .resume-count {
+    font-family:'Courier New','Consolas',monospace;
+    font-size:10px; color:rgba(160,144,192,0.45); letter-spacing:1px;
+  }
+
+  .resume-body {
+    max-height:0; overflow:hidden;
+    transition:max-height 0.4s ease-out;
+    position:relative; z-index:2;
+  }
+  .resume-toggle:checked ~ .resume-body {
+    max-height:500px; /* 足够容纳6条 */
+  }
+
+  .resume-list {
+    padding:8px 10px; display:flex; flex-direction:column; gap:6px;
+    background:rgba(0,0,0,0.25);
+  }
+
+  .resume-item {
+    padding:8px 10px; border-radius:8px;
+    border-left:2px solid transparent;
+    transition:border-color 0.3s, background 0.3s;
+  }
+  .resume-item:hover { background:rgba(157,78,221,0.05); }
+
+  /* 已解析 */
+  .resume-unlocked { border-left-color:rgba(0,245,255,0.4); }
+
+  .resume-item-title {
+    font-family:'Orbitron','Microsoft YaHei',sans-serif;
+    font-size:11px; font-weight:700; letter-spacing:1px;
+    color:#d0e8f0; display:flex; align-items:center; gap:6px;
+    margin-bottom:3px;
+  }
+
+  .resume-dot {
+    display:inline-block; width:6px; height:6px; border-radius:50%; flex-shrink:0;
+  }
+  .resume-dot-on  { background:#00f5ff; box-shadow:0 0 6px rgba(0,245,255,0.6); }
+  .resume-dot-off { background:transparent; border:1px solid rgba(160,144,192,0.3); }
+
+  .resume-item-desc {
+    font-family:'Courier New','Consolas',monospace;
+    font-size:10px; color:#888; font-style:italic; line-height:1.5;
+    padding-left:12px;
+  }
+  .resume-item-desc::before { content:'>> '; color:rgba(160,144,192,0.35); }
+
+  /* 数据乱码 */
+  .resume-locked .resume-item-title { color:#666; }
+  .resume-locked .resume-item-desc {
+    filter:blur(1px); opacity:0.6;
+    transition:filter 0.3s, opacity 0.3s;
+  }
+  .resume-locked:hover .resume-item-desc {
+    filter:blur(0.5px); opacity:0.75;
+  }
+
+  @media (max-width:560px) {
+    .resume-title { font-size:11px; }
+    .resume-item-title { font-size:10px; }
+    .resume-item-desc { font-size:9px; }
+  }
+
   /* ===== 隐藏签覆盖层 ===== */
   .hidden-overlay {
     position:fixed; inset:0; z-index:100; background:#000;
@@ -730,6 +839,50 @@
     <div class="modal-text" id="modalText"></div>
     <div class="modal-lucky-row" id="modalLucky"></div>
     <div class="modal-advice" id="modalAdvice"></div>
+
+    <!-- 机枢履历 (纯CSS折叠) -->
+    <div class="resume-wrap">
+      <input type="checkbox" id="resumeToggle" class="resume-toggle">
+      <label for="resumeToggle" class="resume-header">
+        <span class="resume-title">🤖 机枢履历</span>
+        <span class="resume-count">已解析 2/6 段因果</span>
+      </label>
+      <div class="resume-body">
+        <div class="resume-list">
+          <!-- 已解析 1 -->
+          <div class="resume-item resume-unlocked">
+            <div class="resume-item-title"><span class="resume-dot resume-dot-on"></span>初入江湖</div>
+            <div class="resume-item-desc">系统检测到你体内的欧气值为 0.5%，建议多扶老奶奶过马路以积攒初始资本。</div>
+          </div>
+          <!-- 已解析 2 -->
+          <div class="resume-item resume-unlocked">
+            <div class="resume-item-title"><span class="resume-dot resume-dot-on"></span>量子纠缠</div>
+            <div class="resume-item-desc">观测结果显示，你的运气陷入了时间循环。要不要试试对着屏幕喊"芝麻开门"？</div>
+          </div>
+          <!-- 数据乱码 3 -->
+          <div class="resume-item resume-locked">
+            <div class="resume-item-title"><span class="resume-dot resume-dot-off"></span>绝地反杀</div>
+            <div class="resume-item-desc">⚠️ 警告：你试图用凡人的意志篡改底层因果代码，此行为已被天道记录在案。</div>
+          </div>
+          <!-- 数据乱码 4 -->
+          <div class="resume-item resume-locked">
+            <div class="resume-item-title"><span class="resume-dot resume-dot-off"></span>天道内卷</div>
+            <div class="resume-item-desc">Error 404：天道服务器繁忙，无法处理您的请求。建议去阳台吹吹风，或者吃个瓜。</div>
+          </div>
+          <!-- 数据乱码 5 -->
+          <div class="resume-item resume-locked">
+            <div class="resume-item-title"><span class="resume-dot resume-dot-off"></span>非酋的凝视</div>
+            <div class="resume-item-desc">⚠️ 诊断结果：您的运气已跌破平行宇宙下限。系统正在为您订购一箱"旺旺"以作慰藉。</div>
+          </div>
+          <!-- 数据乱码 6 -->
+          <div class="resume-item resume-locked">
+            <div class="resume-item-title"><span class="resume-dot resume-dot-off"></span>触发奇点</div>
+            <div class="resume-item-desc">⚠️ 警告：您已触及宇宙真理的边缘，系统即将格式化以保护您的脑回路不受污染。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-btns">
       <button class="btn btn-poster" id="modalPosterBtn">📸 生成海报</button>
       <button class="btn btn-close" id="modalCloseBtn">关闭</button>
