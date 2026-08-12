@@ -923,12 +923,13 @@ function showError(msg) {
 function showDailyLock() {
   result.className = 'result active';
   var lastHtml = localStorage.getItem('fortune_last_html') || '';
-  if (!lastHtml) {
-    // 没有缓存的卦象（旧版升级或清过缓存），允许再算一次
+  if (!lastHtml || lastHtml.indexOf('幸运色') === -1) {
+    // 没有缓存或旧版缓存（缺少新功能），清除锁定允许重算
     localStorage.removeItem('fortune_count');
+    localStorage.removeItem('fortune_date');
     result.innerHTML =
       '<div style="text-align:center;padding:20px 10px;">'+
-        '<div style="font-size:14px;color:#a090c0;">暂无历史卦象缓存，请重新起卦</div>'+
+        '<div style="font-size:14px;color:#a090c0;">' + (!lastHtml ? '暂无历史卦象缓存，请重新起卦' : '功能已升级，请重新起卦获取幸运色') + '</div>'+
       '</div>';
     submitBtn.disabled = false;
     return;
