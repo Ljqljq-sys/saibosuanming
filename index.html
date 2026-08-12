@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>玄不救非 · AI算命大师</title>
+<style>
+  :root {
+    --bg: #0a0012; --card-bg: rgba(20, 5, 40, 0.92);
+    --purple: #9b30ff; --gold: #f0c040; --cyan: #00e5ff;
+    --text: #e0d8f0; --sub: #a090c0; --red: #ff5577; --green: #55ddaa;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    overflow-x: hidden;
+  }
+  .stars { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; }
+  .star {
+    position:absolute; background:white; border-radius:50%;
+    animation:twinkle var(--dur) ease-in-out infinite; animation-delay:var(--delay);
+    opacity:0;
+  }
+  @keyframes twinkle {
+    0%,100% { opacity:0.2; transform:scale(1); } 50% { opacity:1; transform:scale(1.8); }
+  }
+  .container { position:relative; z-index:1; width:100%; max-width:480px; margin:16px; }
+  .card {
+    background:var(--card-bg); border:1px solid rgba(155,48,255,0.3);
+    border-radius:20px; padding:28px 24px; backdrop-filter:blur(10px);
+    box-shadow:0 0 60px rgba(155,48,255,0.15);
+  }
+  .title { text-align:center; margin-bottom:4px; }
+  .title .icon-row { font-size:26px; letter-spacing:2px; animation:float 3s ease-in-out infinite; }
+  .title h1 {
+    font-size:20px; font-weight:700; line-height:1.3;
+    background:linear-gradient(135deg,#c77dff,#9b30ff,#7b2fff);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .title .sub { font-size:12px; color:var(--sub); margin-top:2px; }
+  .title .badge {
+    display:inline-block; margin-top:6px; padding:3px 10px; border-radius:20px;
+    font-size:11px; background:rgba(85,221,170,0.15); color:var(--green);
+    border:1px solid rgba(85,221,170,0.25);
+  }
+  @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-8px); } }
+  .form-group { margin-bottom:14px; }
+  .form-group label { display:block; font-size:13px; color:var(--sub); margin-bottom:5px; font-weight:500; }
+  .form-group input {
+    width:100%; padding:12px 14px; background:rgba(255,255,255,0.05);
+    border:1px solid rgba(155,48,255,0.25); border-radius:12px;
+    color:var(--text); font-size:15px; outline:none; transition:all 0.3s;
+    -webkit-appearance:none;
+  }
+  .form-group input:focus { border-color:var(--purple); box-shadow:0 0 20px rgba(155,48,255,0.2); }
+  .form-group input::placeholder { color:rgba(160,144,192,0.35); }
+  .btn-primary {
+    width:100%; padding:14px; border:none; border-radius:14px;
+    font-size:16px; font-weight:600; cursor:pointer; transition:all 0.3s; letter-spacing:2px;
+    background:linear-gradient(135deg,#9b30ff,#7b2fff); color:white;
+    box-shadow:0 4px 24px rgba(155,48,255,0.4);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 6px 32px rgba(155,48,255,0.6); }
+  .btn-primary:active { transform:scale(0.97); }
+  .btn-primary:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+  .btn-secondary {
+    width:100%; padding:13px; border:none; border-radius:14px;
+    font-size:15px; font-weight:600; cursor:pointer; transition:all 0.3s;
+    background:rgba(255,255,255,0.06); color:var(--sub); margin-top:8px;
+  }
+  .btn-secondary:hover { background:rgba(255,255,255,0.12); }
+
+  .loading { display:none; text-align:center; padding:16px 0; }
+  .loading.active { display:block; }
+  .crystal {
+    width:52px; height:52px; margin:0 auto 10px;
+    border:4px solid rgba(155,48,255,0.2); border-top-color:var(--purple);
+    border-radius:50%; animation:spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading p { color:var(--sub); font-size:13px; }
+
+  .result { display:none; margin-top:16px; }
+  .result.active { display:block; }
+  .result-line {
+    padding:10px 14px; margin-bottom:6px; border-radius:12px;
+    background:rgba(255,255,255,0.03); border-left:3px solid var(--purple);
+    font-size:14px; line-height:1.55;
+    opacity:0; transform:translateY(12px);
+    animation:slideIn 0.4s ease forwards;
+  }
+  .result-line:nth-child(1){animation-delay:0.1s;border-left-color:#f0c040}
+  .result-line:nth-child(2){animation-delay:0.2s;border-left-color:#5b9eff}
+  .result-line:nth-child(3){animation-delay:0.3s;border-left-color:#ff7eb6}
+  .result-line:nth-child(4){animation-delay:0.4s;border-left-color:#55ddaa}
+  .result-line:nth-child(5){animation-delay:0.5s;border-left-color:#00e5ff}
+  .result-line:nth-child(6){animation-delay:0.6s;border-left-color:#ff5577}
+  @keyframes slideIn { to { opacity:1; transform:translateY(0); } }
+  .error-msg { color:#ff5577; text-align:center; padding:14px; font-size:14px; }
+
+  .footer { text-align:center; margin-top:14px; font-size:11px; color:rgba(160,144,192,0.35); line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="container">
+  <div class="card">
+
+    <div class="title">
+      <div class="icon-row">🔮☯🔮</div>
+      <h1>玄不救非 · AI算命大师</h1>
+      <div class="sub">赛博玄学 · 输入即算 · 无需后台</div>
+      <div class="badge">🆓 永久免费 · 无需注册 · 纯前端</div>
+    </div>
+
+    <form id="fortuneForm" style="margin-top:20px">
+      <div class="form-group">
+        <label>📛 你的姓名</label>
+        <input type="text" id="name" placeholder="请输入姓名或昵称" maxlength="20" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>🎂 你的生日</label>
+        <input type="text" id="birthday" placeholder="YYYY-MM-DD，如 1995-08-15" maxlength="10" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>💬 当前心情</label>
+        <input type="text" id="mood" placeholder="一句话说说现在的心情" maxlength="50">
+      </div>
+      <button type="submit" class="btn-primary" id="submitBtn">🔮 开 始 算 命</button>
+    </form>
+
+    <div class="loading" id="loading">
+      <div class="crystal"></div>
+      <p>正在连接赛博玄学网络...</p>
+    </div>
+
+    <div class="result" id="result"></div>
+    <button class="btn-secondary" id="retryBtn" style="display:none">🔄 再算一次</button>
+  </div>
+
+  <div class="footer">☯ 仅供娱乐 · 你才是自己命运的主宰 ☯</div>
+</div>
+
+<script>
+// ============================================================
+// 星星背景
+// ============================================================
+(function() {
+  var s = document.getElementById('stars');
+  for (var i = 0; i < 60; i++) {
+    var d = document.createElement('div'); d.className = 'star';
+    var size = Math.random() * 2.5 + 1;
+    d.style.cssText =
+      'left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;'+
+      'width:'+size+'px;height:'+size+'px;'+
+      '--dur:'+(Math.random()*3+2)+'s;--delay:'+(Math.random()*5)+'s;';
+    s.appendChild(d);
+  }
+})();
+
+// ============================================================
+// 模板数据 (与Python版完全一致)
+// ============================================================
+
+var STAR_PERSONALITY = {
+  "紫微": ["帝王星坐命","天生自带主角光环，气场两米八！今日决策力MAX，适合主导方向性事务。",4],
+  "天机": ["智多星坐命","脑袋转得比CPU还快，今天适合头脑风暴、搞创意、做方案。",4],
+  "太阳": ["太阳星坐命","走到哪亮到哪！今天适合主动出击，展现自己的热情和魅力。",4],
+  "武曲": ["武曲星坐命","刚毅果决，执行力爆表。今天适合处理积压任务、推进项目。",4],
+  "天同": ["天同星坐命","福星高照，心态稳如老狗。今天适合享受生活，顺其自然。",4],
+  "廉贞": ["廉贞星坐命","执着又多变，今天创意灵感迸发，但也容易纠结小事。",3],
+  "天府": ["天府星坐命","稳重包容，天生的管理者。今天适合统筹规划、当和事佬。",4],
+  "太阴": ["太阴星坐命","温柔细腻，直觉敏锐。今天适合做需要细心和审美的事。",4],
+  "贪狼": ["贪狼星坐命","多才多艺，魅力四射！今天桃花和机会都多，但要学会选择。",3],
+  "巨门": ["巨门星坐命","口才一流，但也容易惹是非。今天说话前先过脑子，避免误会。",3],
+  "天相": ["天相星坐命","天生的辅佐之才，今天适合团队协作、帮人解决问题。",4],
+  "天梁": ["天梁星坐命","老中医体质——稳重长寿，今天适合养生、照顾他人。",4],
+  "七杀": ["七杀星坐命","敢冲敢拼的冒险家！今天适合挑战新领域，但别太莽撞。",3],
+  "破军": ["破军星坐命","不破不立！今天可能有意外的变化，拥抱改变会有惊喜。",3]
+};
+
+var STAR_CAREER = {
+  "紫微":"今天是职场主角，大胆发言、主动承担，领导会注意到你 🚀",
+  "天机":"脑子灵光，适合做策略规划、写方案、搞创意，idea一个接一个",
+  "太阳":"主动发光发热，适合做汇报、主持、对外沟通，存在感拉满",
+  "武曲":"执行力MAX，适合一口气解决堆积任务，KPI收割机模式启动",
+  "天同":"不卷不焦虑，按自己的节奏来。今天做点自己喜欢的、有成就感的事",
+  "廉贞":"创意灵感爆棚，适合搞创作写代码，但可能会纠结细节到深夜",
+  "天府":"稳扎稳打的一天，适合做规划、整理、统筹，当好团队的定海神针",
+  "太阴":"细心+审美在线，适合做设计、排版、润色类工作，质量优先",
+  "贪狼":"社交力MAX，今天适合拓展人脉、谈合作，但注意别画太多饼",
+  "巨门":"口才在线但容易说多错多，今天少说多做，把精力放在实操上",
+  "天相":"辅助能力拉满，今天适合帮同事、做支持性工作，好人缘+1",
+  "天梁":"适合做复盘、优化、查缺补漏，你的经验和稳重今天很值钱",
+  "七杀":"冲劲十足！适合攻坚克难、啃硬骨头，但注意别跟同事硬刚",
+  "破军":"变革的一天，可能有突发任务或方向调整，适应就好，说不定是新机会"
+};
+
+var STAR_WEALTH = {
+  "紫微":"💰 财运稳中有升，适合做长线规划，别冲动消费就OK",
+  "天机":"🧠 偏财运不错！可能是信息差、一个小idea带来的收入机会",
+  "太阳":"📊 正财运在线，做好本职工作就有回报，不求暴富但求稳定",
+  "武曲":"💪 武曲是财星！今天适合研究理财产品、谈薪资、签合同",
+  "天同":"🎨 财运平稳，知足常乐。小确幸型的消费——一杯奶茶的快乐",
+  "廉贞":"🔥 财运波动，可能有意外支出也可能有意外收入，注意记账",
+  "天府":"🏠 稳健型理财，今天适合做预算、存钱、研究房产类资产",
+  "太阴":"🌙 细水长流型财运，小额进账不断，适合做副业小尝试",
+  "贪狼":"🎭 桃花财！社交场合可能带来赚钱机会，但也要小心冲动消费",
+  "巨门":"🤔 财运一般，今天不适合投资决策，先观察再行动",
+  "天相":"🤝 合作生财，今天适合谈合作、对接资源，借力打力",
+  "天梁":"🏛 财运稳定偏保守，适合储蓄和规划，别碰高风险投资",
+  "七杀":"⚔ 大刀阔斧的一天，可能有大的收支变动，决策前三思",
+  "破军":"🌊 财运起伏大，可能有意外开支，也可能有计划外的进账"
+};
+
+var STAR_LOVE = {
+  "紫微":"💜 气场强大吸引目光，今天容易被人暗恋或搭讪，保持微笑就好",
+  "天机":"💡 聪明的大脑就是最好的魅力，今天的深度聊天会让人心动",
+  "太阳":"☀ 热情主动就是你的必杀技，今天适合主动约人、表达好感",
+  "武曲":"💎 低调务实反而吸引人，认真工作的样子最有魅力",
+  "天同":"🌈 轻松自在的状态最迷人，适合跟喜欢的人一起放松",
+  "廉贞":"🔥 魅力值在线但容易纠结，遇到对眼的人可以大胆一点",
+  "天府":"🏰 稳重可靠的气质，容易让人觉得有安全感，桃花质量不错",
+  "太阴":"🌙 温柔体贴最动人，今天的小细节会让对方印象深刻",
+  "贪狼":"🎭 桃花朵朵开！但要注意分辨正桃花和烂桃花，别来者不拒",
+  "巨门":"🗣 今天表达能力拉满，聊得来就是缘分，但注意别怼人",
+  "天相":"🌸 温和体贴的魅力，今天适合当个贴心的倾听者",
+  "天梁":"🦉 成熟稳重的气质吸引人，可能收到长辈介绍的对象",
+  "七杀":"⚡ 直来直去的魅力，喜欢就大胆追，但不喜欢的也直接拒绝",
+  "破军":"🌪 桃花来的快去得也快，今天的心动可能是一见钟情式的"
+};
+
+var DO_ACTIONS = [
+  "主动出击搞副业","专注搞定学习任务","约人聊合作","花时间学新技能",
+  "投资自己——读书充电","发朋友圈秀成果","做一顿美食犒劳自己","整理一下房间",
+  "尝试新运动","给自己安排一个放松日","联系老朋友聊聊","开始计划旅行",
+  "认真思考职业方向","订个小目标：早起","主动帮别人解决问题","大胆说出你的想法",
+  "推一个积压的PR","去运动顺便听播客","整理一下财务账单","花30分钟搞定一个bug",
+  "写日记记录心情","学做一道新菜","整理电脑桌面","约朋友喝咖啡","买一本想看的书",
+  "多喝水保持精力","听一首喜欢的歌","对镜子里的自己笑一下","给爸妈打个电话",
+  "午休20分钟充电","列一份本周计划清单","删掉不用的APP","清理手机相册",
+  "手写一封信给自己","逛公园呼吸新鲜空气","尝试冥想5分钟","换一条新路线通勤",
+  "跟同事分享零食","整理衣柜断舍离","学一个快捷键提升效率","备份重要文件",
+  "吃一顿营养早餐","早睡15分钟","读一篇深度好文","帮陌生人一个小忙",
+  "把自己的idea写下来","做一次眼保健操","收藏的好课开始看第一节","换一张新壁纸",
+  "把欠的电影看了","拍一张今天的天空","对服务人员说声谢谢","晒晒太阳补充维D",
+  "记录今天的三个小确幸","把快递拆了别堆着","泡一杯好茶慢慢品","做10个俯卧撑",
+  "回复一条拖延已久的消息","整理浏览器书签","给自己买一束花","把旧衣服捐掉",
+  "学一个外语单词","用左手刷牙（激活右脑）","做一次深度复盘","饭后散步15分钟"
+];
+
+var DONT_ACTIONS = [
+  "冲动做重大决定","熬夜刷手机到凌晨","跟人争论无关紧要的事","暴饮暴食垃圾食品",
+  "在群里乱发消息刷屏","冲动消费买买买","跟同事内卷较劲","一个人emo胡思乱想",
+  "把重要的事拖到明天","相信天上掉馅饼的鬼话","在深夜做人生决策","跟对象翻旧账",
+  "轻信陌生人的投资建议","被别人PUA你的选择","跟风投资不做功课","过度解读别人的话",
+  "边开会边刷短视频","在地铁上外放看剧","把情绪发泄在亲近的人身上","空腹喝三杯咖啡",
+  "凌晨还在焦虑工作的事","一次性答应所有人的请求","不吃饭靠奶茶续命","同时开10个网页看",
+  "刷完朋友圈又刷微博又刷抖音","穿没干透的衣服出门","跟网友抬杠对线","反复查看前任的社交动态",
+  "把所有钱都投进一个理财产品","随手下App不看清权限","边充电边玩手机到发烫","在工位上一坐就是半天不动",
+  "口嗨答应做不到的事","用明天再说的心态逃避","等快过期了才开始处理正事","把坏情绪带到第二天",
+  "跟不太熟的人掏心掏肺","在朋友圈发泄负能量","因为不好意思拒绝就勉强答应",
+  "边吃饭边刷剧结果吃多了","大半夜看美食视频然后点外卖","从来不备份觉得不会出事",
+  "拿自己的短板跟别人的长板比","把今天的事赖给昨天的自己","因为打折买不需要的东西",
+  "在公共场合大声接电话","看到消息已读不回装死","把没验证过的谣言转发到家族群",
+  "长时间戴耳机音量开太大","把水果放到烂了才想起来吃","把袜子攒一周一起洗",
+  "坐椅子上跷二郎腿一整天","用牙咬开瓶盖","把密码设成123456",
+  "觉得自己不行就还没开始就放弃","在背后议论同事的是非","把锅甩给客观条件"
+];
+
+var MOOD_BOOST = {
+  "开心": ["心情好就是最好的风水，今天好运加倍！","开心就是开运！继续保持这个状态！","心情好运气自然好，今天干啥都顺！"],
+  "积极": ["积极的心态就是最强的锦鲤！冲就完了！","你的积极会吸引好运，保持住！","有目标有干劲，今天效率爆表！"],
+  "平静": ["内心平静是最难得的福气，享受今天的安宁吧。","淡定从容的你，今天会有小惊喜～","平静中自有力量，适合沉淀和思考。"],
+  "低落": ["运势这东西跟股票一样，跌了总会涨的～","低落的情绪只是过客，今天给自己一点温柔。","低谷是反弹的前奏，别太苛责自己。"],
+  "焦虑": ["别急别急，你的运势在加载中……99%……","焦虑的时候先深呼吸，今天的宜忌会帮到你！","把焦虑转化成行动力，做一件小事开始！"],
+  "烦躁": ["水逆退散符已发送！今天运势有惊喜哦～","烦躁的时候适合一个人静静，运势不差。","放松一点，今天不适合硬刚，适合躺平。"]
+};
+
+// ============================================================
+// 核心算法
+// ============================================================
+
+function moodCategory(mood) {
+  var m = mood.trim().toLowerCase();
+  var map = {
+    "开心":"开心","高兴":"开心","快乐":"开心","爽":"开心","happy":"开心","好":"开心",
+    "积极":"积极","加油":"积极","冲":"积极","努力":"积极",
+    "平静":"平静","淡定":"平静","佛系":"平静","随便":"平静",
+    "低落":"低落","难过":"低落","伤心":"低落","sad":"低落","emo":"低落",
+    "焦虑":"焦虑","紧张":"焦虑","慌":"焦虑","急":"焦虑",
+    "烦躁":"烦躁","烦":"烦躁","累":"烦躁","困":"烦躁",
+    "好奇":"积极","期待":"积极","迷茫":"低落","无聊":"平静"
+  };
+  for (var kw in map) {
+    if (m.indexOf(kw) !== -1) return map[kw];
+  }
+  if (mood.trim().length <= 2) return "平静";
+  if (/[好棒赞爱喜欢]/.test(m)) return "开心";
+  if (/[累困烦糟糕烂]/.test(m)) return "烦躁";
+  return "平静";
+}
+
+// 简易 hash 函数
+function hashStr(s) {
+  var h = 0;
+  for (var i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+// 基于种子的伪随机选择
+function pick(arr, seed, idx) {
+  return arr[(seed + idx * 131) % arr.length];
+}
+
+function shuffle(arr, seed) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = (seed * (i + 1) * 31) % (i + 1);
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+function starsStr(n) {
+  var s = "";
+  for (var i = 0; i < 5; i++) s += (i < n) ? "★" : "☆";
+  return s;
+}
+
+// ============================================================
+// 命理引擎
+// ============================================================
+
+function generateFortune(name, birthday, mood) {
+  var seed = hashStr(name + "|" + birthday);
+  var mcat = moodCategory(mood);
+
+  // 生肖
+  var dt = new Date(birthday + "T00:00:00");
+  var year = dt.getFullYear();
+  var month = dt.getMonth() + 1;
+  var day = dt.getDate();
+  var zodiac = ["猴","鸡","狗","猪","鼠","牛","虎","兔","龙","蛇","马","羊"];
+  var animal = zodiac[year % 12];
+
+  // 宿曜 (day of week based)
+  var dayXiuList = ["日曜","月曜","火曜","水曜","木曜","金曜","土曜"];
+  var dayXiu = dayXiuList[dt.getDay()];
+
+  // 根据生日选一个"主导星"——不是真的紫微斗数，但能让每天都不同
+  var starPool = ["紫微","天机","太阳","武曲","天同","廉贞","天府","太阴","贪狼","巨门","天相","天梁","七杀","破军"];
+  // 用生日天数 + 年份混合选择
+  var dayOfYear = Math.floor((dt - new Date(year, 0, 0)) / 86400000);
+  var starIdx = (dayOfYear * 7 + year * 3 + month * 11 + day * 17) % starPool.length;
+  var mainStar = starPool[starIdx];
+
+  var info = STAR_PERSONALITY[mainStar] || ["","命运自成一格，与众不同。",3];
+
+  // 星级 (基于月份+日期混合)
+  var ratingBase = info[2];
+  var ratingMod = (dayOfYear + hashStr(name) % 31) % 3 - 1; // -1, 0, +1
+  var rating = Math.max(2, Math.min(5, ratingBase + ratingMod));
+  var stars = starsStr(rating);
+
+  // 事业/财运/桃花——从不同偏移量取星
+  var careerStar = starPool[(starIdx + 3) % starPool.length];
+  var wealthStar = starPool[(starIdx + 5) % starPool.length];
+  var loveStar = starPool[(starIdx + 7) % starPool.length];
+
+  // 心情加持
+  var boosts = MOOD_BOOST[mcat] || ["🌟 今天运势不错，保持好心情！","🍀 吉星高照！","✨ 命运在自己手中！"];
+  var moodLine = boosts[hashStr(mood + "boost") % boosts.length];
+
+  // 宜/忌 —— 用心情做偏移，不同心情不同结果，同一个人也不会重复
+  var moodSeed = hashStr(mood);
+  var shuffledDo = shuffle(DO_ACTIONS, seed + moodSeed);
+  var shuffledDont = shuffle(DONT_ACTIONS, seed + moodSeed + 777);
+  // 取第3-4个而不是第1-2个，不同心情偏移不同位置
+  var moodOffset = moodSeed % 20;
+  var doItems = [shuffledDo[moodOffset % shuffledDo.length], shuffledDo[(moodOffset + 7) % shuffledDo.length]];
+  var dontItems = [shuffledDont[(moodOffset + 3) % shuffledDont.length], shuffledDont[(moodOffset + 11) % shuffledDont.length]];
+
+  // 综合运势行
+  var yunshiLine = "🌟 今日综合运势：" + info[1] + " " + stars;
+
+  var lines = [
+    yunshiLine,
+    "💼 事业/学业运：" + (STAR_CAREER[careerStar] || "今天适合按自己的节奏来，不卷也不躺。"),
+    "💕 桃花运：" + (STAR_LOVE[loveStar] || "桃花运势平稳，随缘就好。"),
+    "💰 财运：" + (STAR_WEALTH[wealthStar] || "财运平稳，不奢求暴富但求安心。"),
+    "✅ 宜：" + doItems.join("，"),
+    "❌ 忌：" + dontItems.join("，"),
+    "📿 " + moodLine
+  ];
+
+  return lines.join("\n");
+}
+
+// ============================================================
+// UI 逻辑
+// ============================================================
+
+var form = document.getElementById('fortuneForm');
+var loading = document.getElementById('loading');
+var result = document.getElementById('result');
+var submitBtn = document.getElementById('submitBtn');
+var retryBtn = document.getElementById('retryBtn');
+
+form.addEventListener('submit', function(e) {
+  e.preventDefault();
+  var name = document.getElementById('name').value.trim();
+  var birthday = document.getElementById('birthday').value.trim();
+  var mood = document.getElementById('mood').value.trim();
+
+  if (!name || !birthday || !mood) {
+    showError("姓名、生日、心情都要填哦～");
+    return;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
+    showError("日期格式不对，请用 YYYY-MM-DD，如 1995-08-15");
+    return;
+  }
+  // 验证日期有效性
+  var dt = new Date(birthday + "T00:00:00");
+  if (isNaN(dt.getTime())) {
+    showError("请输入有效的日期");
+    return;
+  }
+
+  result.className = 'result'; result.innerHTML = '';
+  retryBtn.style.display = 'none';
+  loading.classList.add('active');
+  submitBtn.disabled = true;
+
+  // 模拟计算延迟（让动画可见）
+  setTimeout(function() {
+    try {
+      var fortune = generateFortune(name, birthday, mood);
+      loading.classList.remove('active');
+      submitBtn.disabled = false;
+      result.className = 'result active';
+
+      var html = '';
+      var lines = fortune.trim().split('\n');
+      lines.forEach(function(line) {
+        var t = line.trim();
+        if (t) html += '<div class="result-line">' + escapeHtml(t) + '</div>';
+      });
+      result.innerHTML = html;
+      retryBtn.style.display = 'block';
+    } catch (err) {
+      loading.classList.remove('active');
+      submitBtn.disabled = false;
+      showError("算命出错，请重试～");
+    }
+  }, 600);
+});
+
+retryBtn.addEventListener('click', function(){
+  result.className = 'result'; result.innerHTML = '';
+  retryBtn.style.display = 'none';
+  form.reset();
+  document.getElementById('name').focus();
+});
+
+function showError(msg) {
+  result.className = 'result active';
+  result.innerHTML = '<div class="error-msg">⚠ ' + escapeHtml(msg) + '</div>';
+  retryBtn.style.display = 'block';
+}
+
+function escapeHtml(text) {
+  var d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
