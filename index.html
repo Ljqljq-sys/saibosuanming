@@ -720,10 +720,11 @@ form.addEventListener('submit', function(e) {
     return;
   }
 
-  // 每日一签：同一天只能算一次
+  // 每日一签：每天最多算两次
   var today = new Date().toDateString();
   var lastDate = localStorage.getItem('fortune_date');
-  if (lastDate === today) {
+  var count = parseInt(localStorage.getItem('fortune_count')) || 0;
+  if (lastDate === today && count >= 2) {
     showDailyLock();
     return;
   }
@@ -786,8 +787,10 @@ form.addEventListener('submit', function(e) {
       result.innerHTML = html;
       retryBtn.style.display = 'block';
       posterBtn.style.display = 'block';
-      // 记录今日卦象已定
+      // 记录今日卦象次数
       localStorage.setItem('fortune_date', today);
+      var curCount = parseInt(localStorage.getItem('fortune_count')) || 0;
+      localStorage.setItem('fortune_count', curCount + 1);
       // 缓存海报数据
       posterBtn._data = {name:name, birthday:birthday, mood:mood, lines:lines};
     } catch (err) {
@@ -799,7 +802,6 @@ form.addEventListener('submit', function(e) {
 });
 
 retryBtn.addEventListener('click', function(){
-  localStorage.removeItem('fortune_date');
   result.className = 'result'; result.innerHTML = '';
   retryBtn.style.display = 'none';
   posterBtn.style.display = 'none';
@@ -816,19 +818,14 @@ function showError(msg) {
 
 function showDailyLock() {
   result.className = 'result active';
-  var yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
   result.innerHTML =
     '<div style="text-align:center;padding:20px 10px;">'+
       '<div style="font-size:48px;margin-bottom:8px;">☯</div>'+
       '<div style="font-size:18px;color:#f0c040;font-weight:600;margin-bottom:8px;">今日卦象已定</div>'+
       '<div style="font-size:14px;color:#a090c0;line-height:1.8;">'+
-        '天机不可频泄，一日一卦为宜<br>'+
+        '天机不可频泄，一日不过三<br>'+
         '宜静不宜动，宜守不宜求<br>'+
         '请于明日再来参悟玄机'+
-      '</div>'+
-      '<div style="margin-top:12px;font-size:12px;color:rgba(160,144,192,0.4);">'+
-        '上回卜卦：' + yesterday.toLocaleDateString('zh-CN') +
       '</div>'+
     '</div>';
   submitBtn.disabled = false;
