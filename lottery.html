@@ -572,6 +572,74 @@
     .card { padding:16px 6px 12px; }
   }
 
+  /* ===== 命盘按钮 ===== */
+  .chart-btn {
+    font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px;
+    color:rgba(0,245,255,0.7); background:transparent;
+    padding:6px 16px; border:1px solid rgba(0,245,255,0.3);
+    border-radius:20px; cursor:pointer; transition:all 0.3s;
+  }
+  .chart-btn:hover { color:#fff; border-color:var(--cyan); box-shadow:0 0 12px rgba(0,245,255,0.3); }
+
+  /* ===== 命盘弹窗 ===== */
+  .chart-modal-overlay {
+    position:fixed; inset:0; z-index:55; background:rgba(0,0,0,0.78);
+    backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition:opacity 0.3s;
+  }
+  .chart-modal-overlay.active { opacity:1; pointer-events:auto; }
+
+  .chart-modal {
+    background:var(--card-bg);
+    border:1px solid rgba(0,245,255,0.3);
+    border-radius:20px; padding:24px 20px;
+    max-width:520px; width:92%; max-height:90vh; overflow-y:auto;
+    position:relative;
+    transform:translateY(30px);
+    transition:transform 0.35s cubic-bezier(.34,1.56,.64,1);
+    box-shadow:0 0 30px rgba(0,245,255,0.1);
+  }
+  .chart-modal-overlay.active .chart-modal { transform:translateY(0); }
+
+  .chart-header {
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;
+  }
+  .chart-title {
+    font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700; letter-spacing:2px;
+    color:#00f5ff; text-shadow:0 0 8px rgba(0,245,255,0.4);
+  }
+  .chart-close {
+    background:transparent; border:1px solid rgba(200,180,220,0.3);
+    color:rgba(200,180,220,0.6); font-size:16px; width:30px; height:30px;
+    border-radius:50%; cursor:pointer; transition:all 0.3s;
+    display:flex; align-items:center; justify-content:center; line-height:1;
+  }
+  .chart-close:hover { color:#fff; border-color:var(--pink); box-shadow:0 0 8px rgba(224,64,251,0.3); }
+
+  #chartCanvas {
+    width:100%; border-radius:12px;
+    background:rgba(10,5,25,0.6);
+    border:1px solid rgba(157,78,221,0.15);
+    display:block; margin-bottom:16px;
+  }
+
+  .chart-summary {
+    text-align:center; font-size:14px; color:#e0d0f0;
+    padding:12px 16px; border-radius:12px;
+    background:rgba(157,78,221,0.08);
+    border:1px solid rgba(157,78,221,0.15);
+    text-shadow:0 0 6px rgba(200,160,240,0.3);
+    line-height:1.6;
+  }
+
+  @media (max-width:560px) {
+    .chart-modal { padding:18px 14px; }
+    .chart-title { font-size:13px; }
+    .chart-btn { font-size:10px; padding:5px 12px; letter-spacing:1px; }
+  }
+
   /* ===== 减少动画 ===== */
   @media (prefers-reduced-motion: reduce) {
     .glow-orb { animation:none; opacity:0.5; }
@@ -581,6 +649,8 @@
     .flying-sign, .sign-text-reveal, .emoji-particle, .atmo-particle, .crack-shard, .doom-overlay { display:none !important; }
     .modal { transition:none; }
     .modal-overlay { transition:none; }
+    .chart-modal { transition:none; }
+    .chart-modal-overlay { transition:none; }
     #gridCanvas, #rainCanvas { opacity:0.3; }
     @keyframes cardShakeEnhanced { 0%,100% { transform:none; } }
   }
@@ -607,6 +677,7 @@
   <a class="back-btn" href="index.html">◂ 首页</a>
   <span class="counter" id="counter">今日已抽 0/6</span>
   <span class="date" id="dateDisplay"></span>
+  <button class="chart-btn" id="chartBtn">📊 命盘</button>
 </div>
 
 <!-- 主内容 -->
@@ -663,6 +734,18 @@
       <button class="btn btn-poster" id="modalPosterBtn">📸 生成海报</button>
       <button class="btn btn-close" id="modalCloseBtn">关闭</button>
     </div>
+  </div>
+</div>
+
+<!-- 命盘弹窗 -->
+<div class="chart-modal-overlay" id="chartOverlay">
+  <div class="chart-modal">
+    <div class="chart-header">
+      <span class="chart-title">📊 七日运势命盘</span>
+      <button class="chart-close" id="chartCloseBtn">✕</button>
+    </div>
+    <canvas id="chartCanvas"></canvas>
+    <div class="chart-summary" id="chartSummary"></div>
   </div>
 </div>
 
@@ -2316,6 +2399,265 @@ function saveResult(type, result) {
   if (localStorage.getItem('lottery_random_' + todayKey)) count++;
   localStorage.setItem('lottery_redraw_' + todayKey, String(count));
   Lottery.state.redrawCount = count;
+  saveScoreHistory(type, result);
+}
+
+// ============================================================
+// D2: 命盘 - 分数历史存储 + 折线图
+// ============================================================
+var SCORE_MAP = { '大吉':5, '吉':4, '中吉':3, '末吉':2, '凶':1, '大凶':0, '？？？':2.5 };
+var SCORE_HISTORY_KEY = 'fortune_score_history';
+var MAX_HISTORY_DAYS = 30;
+
+function saveScoreHistory(type, result) {
+  var todayKey = getTodayKey();
+  var score = SCORE_MAP[result.level] !== undefined ? SCORE_MAP[result.level] : 2.5;
+  var raw = localStorage.getItem(SCORE_HISTORY_KEY);
+  var history = raw ? JSON.parse(raw) : [];
+  // 查找今天是否已有记录
+  var found = null;
+  for (var i = 0; i < history.length; i++) {
+    if (history[i].date === todayKey) { found = history[i]; break; }
+  }
+  if (found) {
+    // 同天多签：加权平均
+    found.score = (found.score * found.count + score) / (found.count + 1);
+    found.count += 1;
+  } else {
+    history.push({ date: todayKey, score: score, count: 1 });
+  }
+  // 最多 30 天
+  if (history.length > MAX_HISTORY_DAYS) history = history.slice(-MAX_HISTORY_DAYS);
+  try { localStorage.setItem(SCORE_HISTORY_KEY, JSON.stringify(history)); } catch(e) {}
+}
+
+function getChartData() {
+  var raw = localStorage.getItem(SCORE_HISTORY_KEY);
+  var history = raw ? JSON.parse(raw) : [];
+  // 生成最近7天数据
+  var days = [];
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date();
+    d.setDate(d.getDate() - i);
+    var dateKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    var label = String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
+    // 查找该日是否有记录
+    var entry = null;
+    for (var j = 0; j < history.length; j++) {
+      if (history[j].date === dateKey) { entry = history[j]; break; }
+    }
+    days.push({
+      date: dateKey,
+      label: label,
+      score: entry ? entry.score : null,
+      count: entry ? entry.count : 0
+    });
+  }
+  return days;
+}
+
+function drawChart(canvas, data) {
+  var dpr = window.devicePixelRatio || 1;
+  var W = 600, H = 320;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = '100%';
+  canvas.style.height = 'auto';
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  ctx.clearRect(0, 0, W, H);
+
+  var pad = { top: 30, right: 30, bottom: 42, left: 50 };
+  var plotW = W - pad.left - pad.right;
+  var plotH = H - pad.top - pad.bottom;
+
+  // 背景
+  ctx.fillStyle = 'rgba(10,5,25,0.6)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Y轴参考线 + 标签
+  var yLabels = ['5 大吉','4 吉','3 中吉','2 末吉','1 凶','0 大凶'];
+  ctx.font = '10px "Microsoft YaHei","PingFang SC",sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (var y = 0; y <= 5; y++) {
+    var py = pad.top + (5 - y) / 5 * plotH;
+    ctx.strokeStyle = 'rgba(157,78,221,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, py);
+    ctx.lineTo(W - pad.right, py);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(160,144,192,0.5)';
+    ctx.fillText(yLabels[y], pad.left - 6, py);
+  }
+
+  // X轴标签
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(160,144,192,0.5)';
+  ctx.font = '10px "Microsoft YaHei","PingFang SC",sans-serif';
+  for (var i = 0; i < data.length; i++) {
+    var px = pad.left + i / (data.length - 1) * plotW;
+    ctx.fillText(data[i].label, px, pad.top + plotH + 8);
+  }
+
+  // 收集有效数据点
+  var points = [];
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].score !== null) {
+      points.push({
+        x: pad.left + i / (data.length - 1) * plotW,
+        y: pad.top + (5 - data[i].score) / 5 * plotH,
+        score: data[i].score,
+        idx: i
+      });
+    }
+  }
+
+  if (points.length === 0) {
+    ctx.fillStyle = 'rgba(200,180,220,0.4)';
+    ctx.font = '14px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('暂无数据', W/2, H/2);
+    return;
+  }
+
+  // 颜色函数：分数0→红(HSL 0), 5→绿(HSL 120)
+  function scoreColor(score) {
+    var h = score / 5 * 120; // 0→120
+    return 'hsl(' + h + ', 80%, 50%)';
+  }
+
+  // 绘制填充区域（分段）
+  for (var i = 0; i < points.length - 1; i++) {
+    var p1 = points[i];
+    var p2 = points[i + 1];
+    var midScore = (p1.score + p2.score) / 2;
+    var grad = ctx.createLinearGradient(p1.x, p1.y, p1.x, pad.top + plotH);
+    grad.addColorStop(0, scoreColor(p1.score).replace(')', ', 0.25)').replace('hsl', 'hsla'));
+    grad.addColorStop(1, 'rgba(157,78,221,0.02)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.lineTo(p2.x, pad.top + plotH);
+    ctx.lineTo(p1.x, pad.top + plotH);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 连线（分段着色）
+  for (var i = 0; i < points.length - 1; i++) {
+    var p1 = points[i];
+    var p2 = points[i + 1];
+    var midScore = (p1.score + p2.score) / 2;
+
+    // 检查是否有缺失间隔
+    if (p2.idx - p1.idx > 1) {
+      // 虚线连接缺失
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(200,180,220,0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.strokeStyle = scoreColor(midScore);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    }
+  }
+
+  // 数据点圆
+  for (var i = 0; i < points.length; i++) {
+    var p = points[i];
+    // 外发光
+    ctx.shadowColor = scoreColor(p.score);
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = scoreColor(p.score);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // 白芯
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 缺失天：空心圆标记
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].score === null) {
+      var px = pad.left + i / (data.length - 1) * plotW;
+      var py = pad.top + plotH / 2;
+      ctx.strokeStyle = 'rgba(200,180,220,0.25)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(200,180,220,0.15)';
+      ctx.beginPath();
+      ctx.arc(px, py, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function analyzeTrend(data) {
+  var valid = data.filter(function(d) { return d.score !== null; });
+  if (valid.length < 2) return '数据不足 — 多抽几天签再来看命盘吧 🔮';
+
+  var scores = valid.map(function(d) { return d.score; });
+  var first = scores[0];
+  var last = scores[scores.length - 1];
+  var diff = last - first;
+  var n = scores.length;
+
+  // 标准差
+  var avg = scores.reduce(function(a, b) { return a + b; }, 0) / n;
+  var variance = scores.reduce(function(a, b) { return a + (b - avg) * (b - avg); }, 0) / n;
+  var std = Math.sqrt(variance);
+
+  // 判断趋势
+  if (diff >= 1.5) return '🚀 触底反弹！运势正在强势回升';
+  if (diff <= -1.5) return '📉 高开低走，近期需多加小心';
+
+  // 单调性检查
+  var rising = true, falling = true;
+  for (var i = 1; i < scores.length; i++) {
+    if (scores[i] < scores[i - 1]) rising = false;
+    if (scores[i] > scores[i - 1]) falling = false;
+  }
+  if (rising && diff > 0.5) return '✨ 稳步上升，好运连连';
+  if (falling && diff < -0.5) return '🌧 运势回调，韬光养晦';
+
+  if (std < 0.5) return '⚖ 持平稳健，波澜不惊';
+  if (std >= 1.2) return '🎢 波动起伏，大起大落';
+
+  return '🌤 运势有起有落，保持平常心';
+}
+
+function openChartModal() {
+  var overlay = document.getElementById('chartOverlay');
+  if (!overlay) return;
+  var data = getChartData();
+  var canvas = document.getElementById('chartCanvas');
+  drawChart(canvas, data);
+  document.getElementById('chartSummary').textContent = analyzeTrend(data);
+  overlay.classList.add('active');
+}
+
+function closeChartModal() {
+  document.getElementById('chartOverlay').classList.remove('active');
 }
 
 // ============================================================
@@ -3057,14 +3399,24 @@ function generatePoster() {
   // ESC 关闭
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
+      var chartOvl = document.getElementById('chartOverlay');
       var hiddenOvl = document.getElementById('hiddenOverlay');
       var modalOvl = document.getElementById('modalOverlay');
       if (hiddenOvl.classList.contains('active')) {
         document.getElementById('hiddenCloseBtn').click();
+      } else if (chartOvl.classList.contains('active')) {
+        closeChartModal();
       } else if (modalOvl.classList.contains('active')) {
         closeModal();
       }
     }
+  });
+
+  // 命盘按钮
+  document.getElementById('chartBtn').addEventListener('click', openChartModal);
+  document.getElementById('chartCloseBtn').addEventListener('click', closeChartModal);
+  document.getElementById('chartOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeChartModal();
   });
 
   // 卡片点击
