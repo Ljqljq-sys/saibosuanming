@@ -844,17 +844,27 @@ function showError(msg) {
 function showDailyLock() {
   result.className = 'result active';
   var lastHtml = localStorage.getItem('fortune_last_html') || '';
+  if (!lastHtml) {
+    // 没有缓存的卦象（旧版升级或清过缓存），允许再算一次
+    localStorage.removeItem('fortune_count');
+    result.innerHTML =
+      '<div style="text-align:center;padding:20px 10px;">'+
+        '<div style="font-size:14px;color:#a090c0;">暂无历史卦象缓存，请重新起卦</div>'+
+      '</div>';
+    submitBtn.disabled = false;
+    return;
+  }
   result.innerHTML =
     '<div style="text-align:center;padding:10px 14px;margin-bottom:10px;border-radius:12px;'+
       'background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.2);">'+
       '<span style="font-size:14px;color:#f0c040;">☯ 今日卦象已定 · 宜静不宜动 · 明日再来参悟玄机</span>'+
     '</div>'+
-    (lastHtml ? '<div style="opacity:0.7;">'+lastHtml+'</div>' : '');
+    '<div style="opacity:0.7;">'+lastHtml+'</div>';
   submitBtn.disabled = false;
   retryBtn.style.display = 'block';
   // 恢复海报数据
   var savedLines = localStorage.getItem('fortune_last_lines');
-  if (savedLines && lastHtml) {
+  if (savedLines) {
     try {
       posterBtn._data = {
         name: localStorage.getItem('fortune_last_name') || '',
