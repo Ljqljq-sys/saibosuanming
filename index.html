@@ -791,6 +791,12 @@ form.addEventListener('submit', function(e) {
       localStorage.setItem('fortune_date', today);
       var curCount = parseInt(localStorage.getItem('fortune_count')) || 0;
       localStorage.setItem('fortune_count', curCount + 1);
+      // 缓存最近一次结果，超过次数后可回看
+      localStorage.setItem('fortune_last_html', html);
+      localStorage.setItem('fortune_last_name', name);
+      localStorage.setItem('fortune_last_birthday', birthday);
+      localStorage.setItem('fortune_last_mood', mood);
+      localStorage.setItem('fortune_last_lines', JSON.stringify(lines));
       // 缓存海报数据
       posterBtn._data = {name:name, birthday:birthday, mood:mood, lines:lines};
     } catch (err) {
@@ -818,17 +824,28 @@ function showError(msg) {
 
 function showDailyLock() {
   result.className = 'result active';
+  var lastHtml = localStorage.getItem('fortune_last_html') || '';
   result.innerHTML =
-    '<div style="text-align:center;padding:20px 10px;">'+
-      '<div style="font-size:48px;margin-bottom:8px;">☯</div>'+
-      '<div style="font-size:18px;color:#f0c040;font-weight:600;margin-bottom:8px;">今日卦象已定</div>'+
-      '<div style="font-size:14px;color:#a090c0;line-height:1.8;">'+
-        '天机不可频泄，一日不过三<br>'+
-        '宜静不宜动，宜守不宜求<br>'+
-        '请于明日再来参悟玄机'+
-      '</div>'+
-    '</div>';
+    '<div style="text-align:center;padding:10px 14px;margin-bottom:10px;border-radius:12px;'+
+      'background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.2);">'+
+      '<span style="font-size:14px;color:#f0c040;">☯ 今日卦象已定 · 宜静不宜动 · 明日再来参悟玄机</span>'+
+    '</div>'+
+    (lastHtml ? '<div style="opacity:0.7;">'+lastHtml+'</div>' : '');
   submitBtn.disabled = false;
+  retryBtn.style.display = 'block';
+  // 恢复海报数据
+  var savedLines = localStorage.getItem('fortune_last_lines');
+  if (savedLines && lastHtml) {
+    try {
+      posterBtn._data = {
+        name: localStorage.getItem('fortune_last_name') || '',
+        birthday: localStorage.getItem('fortune_last_birthday') || '',
+        mood: localStorage.getItem('fortune_last_mood') || '',
+        lines: JSON.parse(savedLines)
+      };
+      posterBtn.style.display = 'block';
+    } catch(e) {}
+  }
 }
 
 function escapeHtml(text) {
