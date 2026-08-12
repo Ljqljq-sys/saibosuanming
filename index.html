@@ -699,6 +699,17 @@ var submitBtn = document.getElementById('submitBtn');
 var retryBtn = document.getElementById('retryBtn');
 var posterBtn = document.getElementById('posterBtn');
 
+// 页面加载时：如果今日已达上限，自动恢复上次卦象
+(function() {
+  var today = new Date().toDateString();
+  var lastDate = localStorage.getItem('fortune_date');
+  var count = parseInt(localStorage.getItem('fortune_count')) || 0;
+  var lastHtml = localStorage.getItem('fortune_last_html');
+  if (lastDate === today && count >= 2 && lastHtml) {
+    showDailyLock();
+  }
+})();
+
 form.addEventListener('submit', function(e) {
   e.preventDefault();
   var name = document.getElementById('name').value.trim();
@@ -808,6 +819,14 @@ form.addEventListener('submit', function(e) {
 });
 
 retryBtn.addEventListener('click', function(){
+  // 如果今日已达上限，不清除结果，直接回到锁屏+回看状态
+  var today = new Date().toDateString();
+  var lastDate = localStorage.getItem('fortune_date');
+  var count = parseInt(localStorage.getItem('fortune_count')) || 0;
+  if (lastDate === today && count >= 2) {
+    showDailyLock();
+    return;
+  }
   result.className = 'result'; result.innerHTML = '';
   retryBtn.style.display = 'none';
   posterBtn.style.display = 'none';
