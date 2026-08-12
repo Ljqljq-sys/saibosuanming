@@ -161,23 +161,180 @@
     position:relative; z-index:1;
   }
 
-  /* 摇晃动画 */
+  /* ===== 增强摇晃动画 (rotate ±15°, 频率由快到慢 1.5s) ===== */
   .card.shaking {
-    animation:cardShake 0.5s ease-in-out !important;
+    animation:cardShakeEnhanced 1.5s ease-out !important;
   }
-  @keyframes cardShake {
-    0%,100% { transform:translateX(0); }
-    10%,30%,50%,70%,90% { transform:translateX(-6px); }
-    20%,40%,60%,80% { transform:translateX(6px); }
+  @keyframes cardShakeEnhanced {
+    0%   { transform:rotate(0deg); }
+    4%   { transform:rotate(15deg); }
+    8%   { transform:rotate(-13deg); }
+    12%  { transform:rotate(11deg); }
+    16%  { transform:rotate(-9deg); }
+    20%  { transform:rotate(7deg); }
+    25%  { transform:rotate(-5.5deg); }
+    30%  { transform:rotate(4deg); }
+    36%  { transform:rotate(-3deg); }
+    42%  { transform:rotate(2deg); }
+    48%  { transform:rotate(-1.2deg); }
+    55%  { transform:rotate(0.8deg); }
+    62%  { transform:rotate(-0.4deg); }
+    70%  { transform:rotate(0.2deg); }
+    80%,100% { transform:rotate(0deg); }
   }
-  /* 图标飞出 */
-  .card .card-icon.flyOut {
-    animation:signFlyOut 0.6s ease-out forwards;
+
+  /* ===== 漂浮 Emoji 粒子 ===== */
+  .emoji-particle {
+    position:fixed; pointer-events:none; z-index:44;
+    font-size:22px; animation:emojiFloat 1.2s ease-out forwards;
   }
-  @keyframes signFlyOut {
-    0%   { transform:scale(1); opacity:1; }
-    50%  { transform:scale(2.5) translateY(-20px); opacity:0.8; }
-    100% { transform:scale(3.5) translateY(-60px); opacity:0; }
+  @keyframes emojiFloat {
+    0%   { opacity:1; transform:translateY(0) translateX(0) scale(0.5); }
+    30%  { opacity:1; transform:translateY(-40px) translateX(var(--ex)) scale(1.2); }
+    100% { opacity:0; transform:translateY(-120px) translateX(var(--ex)) scale(0.3); }
+  }
+
+  /* ===== 飞签元素 (CSS绘制) ===== */
+  .flying-sign {
+    position:fixed; z-index:45; pointer-events:none;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .sign-stick {
+    width:14px; height:90px;
+    background:linear-gradient(180deg, #ffe680 0%, #e6a800 20%, #ffd700 50%, #b8780a 100%);
+    border-radius:3px 3px 2px 2px;
+    box-shadow:0 0 24px rgba(240,192,64,0.7),0 0 50px rgba(240,192,64,0.35),inset 0 1px 0 rgba(255,255,255,0.4);
+    position:relative;
+    overflow:hidden;
+  }
+  .sign-stick::before {
+    content:''; position:absolute; top:4px; left:2px; right:2px; bottom:4px;
+    border:1px solid rgba(255,255,255,0.25); border-radius:2px;
+  }
+  .sign-stick::after {
+    content:'签';
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-size:16px; color:#5a3800; font-weight:bold;
+    font-family:'KaiTi','STKaiti','SimSun',serif;
+    text-shadow:0 0 4px rgba(255,215,0,0.5);
+  }
+  .sign-tassel {
+    width:5px; height:26px;
+    background:linear-gradient(180deg, #ff3333 0%, #cc0000 100%);
+    border-radius:0 0 3px 3px; margin-top:-2px;
+    box-shadow:0 0 10px rgba(255,50,50,0.5);
+    position:relative;
+  }
+  .sign-tassel::after {
+    content:''; position:absolute; bottom:-8px; left:-4px; width:13px; height:10px;
+    background:radial-gradient(ellipse, rgba(255,60,60,0.7), transparent 70%);
+    border-radius:50%;
+  }
+  /* 飞签各阶段 */
+  .flying-sign.fly-up {
+    animation:signFlyUp 0.8s cubic-bezier(.22,.61,.36,1) forwards;
+  }
+  @keyframes signFlyUp {
+    0%   { transform:translate(0, 0) rotate(0deg); opacity:0.7; }
+    30%  { transform:translate(var(--fx), var(--fy)) rotate(200deg); opacity:1; }
+    60%  { transform:translate(calc(var(--fx)*0.6), calc(var(--fy)*0.65)) rotate(500deg); opacity:1; }
+    100% { transform:translate(0, 0) rotate(720deg); opacity:1; }
+  }
+  .flying-sign.hovering {
+    animation:signHover 0.5s ease-in-out infinite alternate;
+  }
+  @keyframes signHover {
+    from { transform:translate(0, 0); }
+    to   { transform:translate(0, -8px); }
+  }
+
+  /* ===== 签文展开 (卷轴 scaleX) ===== */
+  .flying-sign.reveal .sign-stick {
+    animation:scrollUnfold 0.5s ease-out forwards;
+  }
+  @keyframes scrollUnfold {
+    0%   { transform:scaleX(0); }
+    70%  { transform:scaleX(3.2); }
+    85%  { transform:scaleX(2.8); }
+    100% { transform:scaleX(3); }
+  }
+  .flying-sign.pop-settle .sign-stick {
+    animation:signPopSettle 0.4s ease-out;
+  }
+  @keyframes signPopSettle {
+    0%   { transform:scale(3.0); }
+    40%  { transform:scale(3.15); }
+    70%  { transform:scale(2.95); }
+    100% { transform:scale(3.0); }
+  }
+  /* 签文浮现文本 */
+  .sign-text-reveal {
+    position:fixed; z-index:46; pointer-events:none;
+    font-family:'KaiTi','STKaiti','SimSun',serif;
+    font-size:15px; color:#d0c8e4; text-align:center;
+    max-width:260px; line-height:1.8;
+    text-shadow:0 0 6px rgba(240,192,64,0.4);
+    animation:textGlowFlicker 2s ease-in-out infinite;
+  }
+  @keyframes textGlowFlicker {
+    0%,100% { text-shadow:0 0 6px rgba(240,192,64,0.4),0 0 2px rgba(240,192,64,0.2); }
+    25%     { text-shadow:0 0 10px rgba(240,192,64,0.7),0 0 4px rgba(240,192,64,0.4); }
+    50%     { text-shadow:0 0 4px rgba(240,192,64,0.3),0 0 1px rgba(240,192,64,0.1); }
+    75%     { text-shadow:0 0 14px rgba(240,192,64,0.8),0 0 6px rgba(240,192,64,0.5); }
+  }
+
+  /* ===== 等级氛围粒子 ===== */
+  .atmo-particle {
+    position:fixed; pointer-events:none; z-index:43; border-radius:50%;
+  }
+  /* 大吉/吉: 金色粒子飘落 */
+  .atmo-particle.gold-fall {
+    animation:goldFall var(--fall-dur) linear forwards;
+  }
+  @keyframes goldFall {
+    0%   { opacity:1; transform:translateY(-20px) translateX(0) scale(1); }
+    70%  { opacity:0.6; }
+    100% { opacity:0; transform:translateY(105vh) translateX(var(--drift)) scale(0.3); }
+  }
+  /* 中吉/末吉: 柔光缓缓上浮 */
+  .atmo-particle.soft-rise {
+    animation:softRise var(--rise-dur) ease-out forwards;
+  }
+  @keyframes softRise {
+    0%   { opacity:0; transform:translateY(0) scale(0.3); }
+    30%  { opacity:0.7; }
+    100% { opacity:0; transform:translateY(-300px) translateX(var(--drift)) scale(1.5); }
+  }
+  /* 凶/大凶: 裂纹碎片 */
+  .crack-shard {
+    position:fixed; pointer-events:none; z-index:43;
+    background:rgba(180,30,30,0.5); border-radius:1px;
+    animation:crackIn var(--crack-dur) ease-out forwards;
+  }
+  @keyframes crackIn {
+    0%   { opacity:0; transform:rotate(var(--cr)) scale(0); }
+    30%  { opacity:0.9; }
+    100% { opacity:0; transform:rotate(var(--cr)) scale(1.2); }
+  }
+  /* 凶/大凶: 暗红氛围 */
+  .doom-overlay {
+    position:fixed; inset:0; z-index:42; pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(180,20,20,0.15) 0%, rgba(80,0,0,0.08) 50%, transparent 70%);
+    animation:doomPulse 0.8s ease-out forwards;
+  }
+  @keyframes doomPulse {
+    0%   { opacity:0; }
+    50%  { opacity:1; }
+    100% { opacity:0; }
+  }
+
+  /* ===== 隐藏签增强: 荧光绿+紫色交替 ===== */
+  .hidden-overlay.active .hidden-text.glitch-flash {
+    animation:glitchFlash 0.15s ease-in-out 3;
+  }
+  @keyframes glitchFlash {
+    0%,100% { color:#00ff00; text-shadow:0 0 10px #00ff00,0 0 30px #00ff00,0 0 60px rgba(0,255,0,0.5); }
+    50%     { color:#bf00ff; text-shadow:0 0 10px #bf00ff,0 0 30px #bf00ff,0 0 60px rgba(191,0,255,0.5); }
   }
 
   /* ===== 结果弹窗 ===== */
@@ -421,10 +578,11 @@
     .title { animation:none; }
     .card { animation:none; opacity:1; transform:none; }
     .card.shaking { animation:none !important; }
-    .card .card-icon.flyOut { animation:none; }
+    .flying-sign, .sign-text-reveal, .emoji-particle, .atmo-particle, .crack-shard, .doom-overlay { display:none !important; }
     .modal { transition:none; }
     .modal-overlay { transition:none; }
     #gridCanvas, #rainCanvas { opacity:0.3; }
+    @keyframes cardShakeEnhanced { 0%,100% { transform:none; } }
   }
 
   /* 响应式 - 顶栏下方留白 */
@@ -1218,7 +1376,252 @@ function closeModal() {
   document.getElementById('modalText').textContent = '';
 }
 
-function showHiddenSign(result) {
+// 注: 原 showHiddenSign 已升级为 showHiddenSignEnhanced (见下方)
+// ============================================================
+
+// ============================================================
+// E-extra: 增强动画系统
+// ============================================================
+
+// 获取卡片中心在视口中的坐标
+function getCardCenter(card) {
+  var rect = card.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+// 1) 漂浮 Emoji 粒子 (摇晃时冒出 3-5 个)
+function spawnEmojiParticles(card) {
+  var center = getCardCenter(card);
+  var emojis = ['🎴','🔮','✨','🪷','💫','⭐','🕯'];
+  var count = 3 + Math.floor(Math.random() * 3); // 3~5
+  var fragments = [];
+  for (var i = 0; i < count; i++) {
+    var el = document.createElement('div');
+    el.className = 'emoji-particle';
+    el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    el.style.left = (center.x + (Math.random() - 0.5) * 60) + 'px';
+    el.style.top  = (center.y - 20) + 'px';
+    el.style.setProperty('--ex', ((Math.random() - 0.5) * 80) + 'px');
+    el.style.animationDuration = (0.8 + Math.random() * 0.8) + 's';
+    el.style.animationDelay = Math.random() * 0.3 + 's';
+    document.body.appendChild(el);
+    fragments.push(el);
+  }
+  // 动画结束后清理
+  setTimeout(function() {
+    for (var j = 0; j < fragments.length; j++) {
+      if (fragments[j].parentNode) fragments[j].parentNode.removeChild(fragments[j]);
+    }
+  }, 1800);
+}
+
+// 2) 创建飞签元素
+function createFlyingSign(startX, startY) {
+  var el = document.createElement('div');
+  el.className = 'flying-sign';
+  el.innerHTML = '<div class="sign-stick"></div><div class="sign-tassel"></div>';
+  el.style.left = startX + 'px';
+  el.style.top  = startY + 'px';
+  // 飞行动画定位: 目标 = 屏幕中央
+  var cx = window.innerWidth / 2;
+  var cy = window.innerHeight / 2;
+  el.style.setProperty('--fx', (cx - startX) + 'px');
+  el.style.setProperty('--fy', (cy - startY - 60) + 'px');
+  document.body.appendChild(el);
+  return el;
+}
+
+// 3) 等级氛围特效
+function spawnAtmosphere(result) {
+  var level = result.level;
+  var fragments = [];
+
+  if (level === '大吉' || level === '吉') {
+    // 金色粒子飘落 (30 个)
+    for (var i = 0; i < 30; i++) {
+      var p = document.createElement('div');
+      p.className = 'atmo-particle gold-fall';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.top = -(Math.random() * 30 + 5) + 'px';
+      p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+      p.style.background = Math.random() < 0.5 ? '#f0c040' : '#ffd700';
+      p.style.boxShadow = '0 0 ' + (4 + Math.random() * 6) + 'px ' + (Math.random() < 0.5 ? '#f0c040' : '#ffd700');
+      p.style.setProperty('--fall-dur', (1.5 + Math.random() * 2.5) + 's');
+      p.style.setProperty('--drift', ((Math.random() - 0.5) * 120) + 'px');
+      p.style.animationDelay = Math.random() * 0.8 + 's';
+      document.body.appendChild(p);
+      fragments.push(p);
+    }
+    // 清理
+    setTimeout(function() {
+      for (var j = 0; j < fragments.length; j++) {
+        if (fragments[j].parentNode) fragments[j].parentNode.removeChild(fragments[j]);
+      }
+    }, 4200);
+
+  } else if (level === '中吉' || level === '末吉') {
+    // 柔光上浮 (10 个)
+    for (var i = 0; i < 10; i++) {
+      var p = document.createElement('div');
+      p.className = 'atmo-particle soft-rise';
+      p.style.left = (20 + Math.random() * 60) + '%';
+      p.style.bottom = '0px';
+      p.style.top = 'auto';
+      p.style.width = p.style.height = (3 + Math.random() * 5) + 'px';
+      var c = Math.random() < 0.5 ? '157,78,221' : '0,245,255';
+      p.style.background = 'rgba(' + c + ',0.6)';
+      p.style.boxShadow = '0 0 ' + (8 + Math.random() * 10) + 'px rgba(' + c + ',0.5)';
+      p.style.setProperty('--rise-dur', (2 + Math.random() * 3) + 's');
+      p.style.setProperty('--drift', ((Math.random() - 0.5) * 60) + 'px');
+      p.style.animationDelay = Math.random() * 0.5 + 's';
+      document.body.appendChild(p);
+      fragments.push(p);
+    }
+    setTimeout(function() {
+      for (var j = 0; j < fragments.length; j++) {
+        if (fragments[j].parentNode) fragments[j].parentNode.removeChild(fragments[j]);
+      }
+    }, 4200);
+
+  } else if (level === '凶' || level === '大凶') {
+    // 暗红氛围
+    var doom = document.createElement('div');
+    doom.className = 'doom-overlay';
+    document.body.appendChild(doom);
+    fragments.push(doom);
+    // 裂纹碎片 (15 个)
+    for (var i = 0; i < 15; i++) {
+      var s = document.createElement('div');
+      s.className = 'crack-shard';
+      s.style.left = (10 + Math.random() * 80) + '%';
+      s.style.top  = (10 + Math.random() * 80) + '%';
+      s.style.width  = (20 + Math.random() * 100) + 'px';
+      s.style.height = (1 + Math.random() * 3) + 'px';
+      s.style.setProperty('--cr', (Math.random() * 360) + 'deg');
+      s.style.setProperty('--crack-dur', (0.6 + Math.random() * 1.2) + 's');
+      s.style.animationDelay = Math.random() * 0.3 + 's';
+      document.body.appendChild(s);
+      fragments.push(s);
+    }
+    setTimeout(function() {
+      for (var j = 0; j < fragments.length; j++) {
+        if (fragments[j].parentNode) fragments[j].parentNode.removeChild(fragments[j]);
+      }
+    }, 2500);
+  }
+}
+
+// 4) 清理所有飞签和文字元素
+function cleanupFlyingElements() {
+  var els = document.querySelectorAll('.flying-sign, .sign-text-reveal');
+  for (var i = 0; i < els.length; i++) {
+    if (els[i].parentNode) els[i].parentNode.removeChild(els[i]);
+  }
+}
+
+// ============================================================
+// 卡片点击处理 (增强版动画流程)
+// ============================================================
+function handleCardClick(type) {
+  if (Lottery.state.isAnimating) return;
+
+  var card = document.querySelector('.card[data-type="' + type + '"]');
+  if (!card) return;
+
+  // 已锁定：直接显示缓存弹窗
+  if (isLocked(type)) {
+    showToast('☯ 今日卦象已定 · 宜静不宜动');
+    var cached = getCachedResult(type);
+    if (cached) {
+      if (cached.isHidden) {
+        openModal(cached, true);
+      } else {
+        openModal(cached, true);
+      }
+    }
+    return;
+  }
+
+  // 预生成结果
+  var result = generateResult(type);
+  saveResult(type, result);
+  Lottery.state.isAnimating = true;
+
+  // === reduced-motion: 跳过动画，直接弹窗 ===
+  if (reducedMotion) {
+    if (result.isHidden) { showHiddenSign(result); }
+    else { openModal(result, false); }
+    Lottery.state.isAnimating = false;
+    return;
+  }
+
+  // === 阶段 1: 摇晃 + 漂浮 emoji ===
+  card.classList.add('shaking');
+  spawnEmojiParticles(card);
+
+  // === 阶段 2: 摇晃结束后飞签出场 ===
+  setTimeout(function() {
+    card.classList.remove('shaking');
+    var center = getCardCenter(card);
+
+    // 隐藏签走独立流程
+    if (result.isHidden) {
+      cleanupFlyingElements();
+      showHiddenSignEnhanced(result);
+      Lottery.state.isAnimating = false;
+      return;
+    }
+
+    // 创建飞签
+    var signEl = createFlyingSign(center.x - 7, center.y - 45);
+    signEl.classList.add('fly-up');
+
+    // === 阶段 3: 飞签悬停 → 展开 ===
+    setTimeout(function() {
+      signEl.classList.remove('fly-up');
+      signEl.classList.add('hovering');
+      // 将签定位到屏幕中央
+      signEl.style.left = (window.innerWidth / 2 - 7) + 'px';
+      signEl.style.top  = (window.innerHeight / 2 - 70) + 'px';
+
+      // 悬停 0.5s 后展开
+      setTimeout(function() {
+        signEl.classList.remove('hovering');
+        signEl.classList.add('reveal');
+
+        // 创建签文浮现文字
+        var textEl = document.createElement('div');
+        textEl.className = 'sign-text-reveal';
+        textEl.style.left = (window.innerWidth / 2 - 130) + 'px';
+        textEl.style.top  = (window.innerHeight / 2 + 10) + 'px';
+        document.body.appendChild(textEl);
+
+        // 打字机效果
+        typewriterEffect(textEl, result.text, 50, function() {
+          // 打字完成 → pop 定签
+          signEl.classList.remove('reveal');
+          signEl.classList.add('pop-settle');
+
+          // 等级氛围特效
+          spawnAtmosphere(result);
+
+          // 定签后 → 移除飞签，打开弹窗
+          setTimeout(function() {
+            cleanupFlyingElements();
+            openModal(result, false);
+            Lottery.state.isAnimating = false;
+          }, 500);
+        });
+
+      }, 500); // hover 500ms
+
+    }, 800); // fly 800ms
+
+  }, 1500); // shake 1500ms
+}
+
+// 隐藏签增强版 (荧光绿+紫色交替)
+function showHiddenSignEnhanced(result) {
   Lottery.state.lastResult = result;
   var overlay = document.getElementById('hiddenOverlay');
   var canvas = document.getElementById('hiddenSignCanvas');
@@ -1226,22 +1629,21 @@ function showHiddenSign(result) {
   var textEl = document.getElementById('hiddenText');
   var closeBtn = document.getElementById('hiddenCloseBtn');
 
-  // 设置 canvas 尺寸
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  // 粒子
+  // 星空粒子
   var particles = [];
-  for (var i = 0; i < 100; i++) {
+  for (var i = 0; i < 120; i++) {
     particles.push({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      vx: (Math.random() - 0.5) * 1.5,
-      vy: (Math.random() - 0.5) * 1.5,
-      size: Math.random() * 3 + 1,
+      vx: (Math.random() - 0.5) * 2,
+      vy: (Math.random() - 0.5) * 2,
+      size: Math.random() * 3.5 + 1,
       alpha: Math.random() * 0.8 + 0.2,
       life: Math.random() * 200 + 50,
-      color: Math.random() < 0.3 ? '#00ff00' : '#ffffff'
+      color: Math.random() < 0.3 ? '#00ff00' : Math.random() < 0.5 ? '#bf00ff' : '#ffffff'
     });
   }
 
@@ -1270,90 +1672,35 @@ function showHiddenSign(result) {
     }
   }
 
-  // 显示覆盖层
   overlay.classList.add('active');
   document.body.style.overflow = 'hidden';
   closeBtn.classList.remove('show');
   textEl.textContent = '';
+  textEl.classList.remove('glitch-flash');
 
   animateParticles();
 
-  // 延迟后开始打字
+  // 打字机展示
   setTimeout(function() {
-    typewriterEffect(textEl, result.text, 50, function() {
-      // 显示关闭按钮
+    typewriterEffect(textEl, result.text, 45, function() {
+      // 荧光绿+紫色交替闪烁
+      textEl.classList.add('glitch-flash');
       setTimeout(function() {
         closeBtn.classList.add('show');
-      }, 500);
+      }, 600);
     });
-  }, 600);
+  }, 500);
 
-  // 关闭按钮
   closeBtn.onclick = function() {
     overlay.classList.remove('active');
     document.body.style.overflow = '';
     if (animId) cancelAnimationFrame(animId);
     textEl.textContent = '';
+    textEl.classList.remove('glitch-flash');
     updateCounter();
   };
 
-  // 更新计数器
   updateCounter();
-}
-
-// 卡片点击处理
-function handleCardClick(type) {
-  if (Lottery.state.isAnimating) return;
-
-  var card = document.querySelector('.card[data-type="' + type + '"]');
-  if (!card) return;
-
-  // 已锁定：显示缓存
-  if (isLocked(type)) {
-    showToast('☯ 今日卦象已定 · 宜静不宜动');
-    var cached = getCachedResult(type);
-    if (cached) {
-      if (cached.isHidden) {
-        // 回看隐藏签用弹窗，不用全屏特效
-        openModal(cached, true);
-      } else {
-        openModal(cached, true);
-      }
-    }
-    return;
-  }
-
-  // 生成结果
-  Lottery.state.isAnimating = true;
-
-  // 摇晃动画
-  card.classList.add('shaking');
-
-  // 图标飞出
-  var iconEl = card.querySelector('.card-icon');
-  if (iconEl && !reducedMotion) {
-    setTimeout(function() {
-      iconEl.classList.add('flyOut');
-    }, 150);
-  }
-
-  // 动画结束后展示结果
-  var animDuration = reducedMotion ? 100 : 600;
-  setTimeout(function() {
-    card.classList.remove('shaking');
-    if (iconEl) iconEl.classList.remove('flyOut');
-
-    var result = generateResult(type);
-    saveResult(type, result);
-
-    if (result.isHidden) {
-      showHiddenSign(result);
-    } else {
-      openModal(result, false);
-    }
-
-    Lottery.state.isAnimating = false;
-  }, animDuration);
 }
 
 // ============================================================
